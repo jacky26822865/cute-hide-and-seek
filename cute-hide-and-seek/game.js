@@ -753,7 +753,12 @@ class WsNet {
 
 // ===================== 免伺服器 P2P（PeerJS，中繼由一位玩家的瀏覽器擔任） =====================
 const PEER_OPTS = () => { const q = new URLSearchParams(location.search), h = q.get('peerhost'); return h ? { host: h.split(':')[0], port: +(h.split(':')[1] || 9000), path: '/', secure: false, debug: 0 } : (window.HS_PEER || { debug: 0 }); };
-const PEER_ICE = [{ urls: 'stun:stun.l.google.com:19302' }, { urls: ['turn:eu-0.turn.peerjs.com:3478', 'turn:us-0.turn.peerjs.com:3478'], username: 'peerjs', credential: 'peerjsp' }];
+const PEER_ICE = [
+  { urls: ['stun:stun.l.google.com:19302', 'stun:stun1.l.google.com:19302'] },
+  { urls: ['turn:openrelay.metered.ca:80', 'turn:openrelay.metered.ca:443', 'turn:openrelay.metered.ca:443?transport=tcp'], username: 'openrelayproject', credential: 'openrelayproject' },
+  { urls: ['turn:eu-0.turn.peerjs.com:3478', 'turn:us-0.turn.peerjs.com:3478'], username: 'peerjs', credential: 'peerjsp' },
+];
+function netProgress(t) { const e = document.getElementById('netNote'); if (e) e.textContent = t; const r = document.getElementById('netStatus'); if (r && !netInfo?.done) r.innerHTML = `<div class="netbar">⏳ ${t}</div>`; }
 class PeerNet {
   constructor() { this.id = null; this.mine = {}; this.others = new Map(); this.onSignal = null; this.hub = null; this.conn = false; this.err = null; }
   mkPeer(id) { return new Promise((res, rej) => { const p = id ? new Peer(id, { ...PEER_OPTS(), config: { iceServers: PEER_ICE } }) : new Peer({ ...PEER_OPTS(), config: { iceServers: PEER_ICE } }); const t = setTimeout(() => rej(Object.assign(new Error('peer timeout'), { type: 'timeout' })), 12000); p.on('open', () => { clearTimeout(t); res(p); }); p.on('error', e => { clearTimeout(t); rej(e); }); }); }
@@ -761,6 +766,7 @@ class PeerNet {
     if (!window.Peer) throw Object.assign(new Error('nopeerjs'), { why: 'nopeerjs' });
     this.code = code; this.hubId = 'cutehs-' + code.toLowerCase();
     const rid = 'p' + Math.random().toString(36).slice(2, 10);
+    netProgress('正在連線配對服務…');
     try { this.me = await this.mkPeer(this.hubId + '-' + rid); } catch (e) { throw Object.assign(new Error('peer'), { why: 'peer:' + (e.type || e.message) }); }
     this.id = rid;
     this.me.on('disconnected', () => { try { this.me.reconnect(); } catch {} });
@@ -775,6 +781,7 @@ class PeerNet {
   async link() {
     this.conn = false; this.others.clear();
     for (let tries = 0; tries < 10 && !this.conn; tries++) {
+      netProgress(tries === 0 ? '正在尋找房間…' : `正在連到房間中繼玩家（第 ${tries + 1}／10 次）…${tries >= 2 ? ' 如果一直卡住，可能是網路擋住了直連（手機行動網路、公司或學校網路常見），可以換成 Wi-Fi 試試。' : ''}`);
       if (!this.hub) { try { this.hub = new Hub(await this.mkPeer(this.hubId)); } catch (e) { if (e.type !== 'unavailable-id') console.warn('[p2p] hub', e.type || e); this.hub = null; } }
       await new Promise((res) => {
         const c = this.me.connect(this.hubId, { reliable: true, serialization: 'json' }); let done = false;
@@ -788,6 +795,7 @@ class PeerNet {
       if (!this.conn) await new Promise(r => setTimeout(r, 800));
     }
     if (!this.conn) throw Object.assign(new Error('nohub'), { why: 'nohub' });
+    netProgress('已連上房間');
   }
   async relink() { if (this.conn || this.relinking) return; this.relinking = true; try { await this.link(); } catch (e) { this.err = '中繼重連失敗'; } this.relinking = false; }
   onMsg(m) {
@@ -1703,7 +1711,7 @@ function netReason(w) {
   if (w.startsWith('join:')) return `加入房間被拒絕（${esc(w.slice(5))}）。可能是這個帳號沒有使用多人房間的權限。`;
   if (w === 'nopeerjs') return '連線元件載入失敗（PeerJS）。請檢查網路後重新整理。';
   if (w.startsWith('peer:')) return `連不上配對服務（${esc(w.slice(5))}）。可能是網路擋住了，換個網路或稍後再試。`;
-  if (w === 'nohub') return '找不到房間的中繼玩家，也無法自己擔任中繼。請重新整理再試一次。';
+  if (w === 'nohub') return '連不到房間裡的其他玩家。通常是網路擋住了玩家之間的直連（手機行動網路、公司或學校網路常見）。請改用 Wi-Fi、關掉 VPN，或請房主重新整理後再試。';
   if (w === 'noid') return '連上了，但一直沒有收到房間的回應。網路可能不穩，請重新整理再試。';
   if (w.includes('ws') || w.includes('timeout')) return '連不到遊戲伺服器。自架版需要先執行伺服器（npm start），並用伺服器的網址開啟，不能直接開 html 檔或只放在 GitHub Pages。';
   return esc(w);
@@ -1836,17 +1844,20 @@ async function join(solo) {
   roomIn.value = code;
   $('joinBtn').disabled = $('soloBtn').disabled = true; $('netNote').textContent = '連線中…';
   AC().resume?.();
-  netInfo = { code, solo, ok: true, why: '' };
+  netInfo = { code, solo, ok: true, why: '', done: false };
   try {
-    if (solo) net = new LocalNet();
-    else if (MODE === 'room') net = new RoomNet();
-    else if (MODE === 'p2p') net = new PeerNet();
-    else net = new WsNet();
-    await net.start(code);
+    let n;
+    if (solo) n = new LocalNet();
+    else if (MODE === 'room') n = new RoomNet();
+    else if (MODE === 'p2p') n = new PeerNet();
+    else n = new WsNet();
+    await n.start(code);
+    net = n; // 連線確定完成後才讓遊戲使用（避免還沒連上就自以為是房主）
   } catch (e) {
     console.warn(e); netInfo.ok = false; netInfo.why = e?.why || e?.message || String(e);
     net = new LocalNet(); await net.start();
   }
+  netInfo.done = true;
   myId = net.id;
   me.name = name; me.char = hash(myId + name) % CHARS.length;
   pres({ j:1, n:name, fa, c:me.char });
