@@ -1,0 +1,311 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>可愛捉迷藏｜孤兒院連線密室</title>
+<link rel="icon" href="data:,">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;700;900&family=Noto+Serif+TC:wght@700;900&display=swap" rel="stylesheet">
+<style>
+:root{--ink:#efe7d8;--dim:#a99f8f;--accent:#e9c46a;--red:#e05a4f;--vis:#7cc4ff;--cap:#ff9f6b;--panel:rgba(14,12,16,.88);--line:rgba(233,196,106,.3)}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;overflow:hidden;background:#07060a;color:var(--ink);font-family:"Noto Sans TC",system-ui,sans-serif}
+canvas#view{display:block}
+.hud{position:fixed;pointer-events:none;z-index:5}
+.chip{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:7px 12px;font-size:13px;line-height:1.55}
+#tl{left:14px;top:12px;display:flex;flex-direction:column;gap:8px;max-width:min(360px,60vw)}
+#phase{font-size:15px;font-weight:900}
+#phase .t{font-variant-numeric:tabular-nums;color:var(--accent);margin-left:6px}
+#role b{color:var(--accent)}
+#statusChip.bad{border-color:var(--red);color:#ffb3ab}
+#mini{right:14px;top:12px;border-radius:10px;border:1px solid var(--line);background:#000a}
+#crosshair{left:50%;top:50%;width:12px;height:12px;margin:-6px 0 0 -6px;border:2px solid rgba(255,255,255,.7);border-radius:50%}
+#crosshair.hot{border-color:var(--accent);transform:scale(1.5)}
+#prompt{left:50%;top:calc(50% + 24px);transform:translateX(-50%);font-size:14px;background:#000a;padding:4px 10px;border-radius:6px;display:none;white-space:nowrap}
+#hold{left:50%;top:calc(50% + 52px);transform:translateX(-50%);width:160px;height:6px;background:#0008;border-radius:3px;display:none}
+#hold i{display:block;height:100%;width:0;background:var(--accent);border-radius:3px}
+#inv{left:50%;bottom:14px;transform:translateX(-50%);display:flex;gap:6px}
+.slot{min-width:64px;height:58px;padding:4px 6px;border-radius:10px;background:var(--panel);border:1px solid rgba(255,255,255,.15);display:flex;flex-direction:column;align-items:center;justify-content:center;font-size:11px;text-align:center;gap:2px}
+.slot .ic{font-size:20px}
+.slot .k{font-size:10px;color:var(--dim)}
+#toast{left:50%;top:18%;transform:translateX(-50%);font-size:17px;font-weight:700;padding:10px 18px;border-radius:10px;background:var(--panel);border:1px solid var(--line);opacity:0;transition:opacity .3s;text-align:center;max-width:80vw}
+#banner{left:0;right:0;top:36%;text-align:center;font-family:"Noto Serif TC",serif;font-size:44px;font-weight:900;letter-spacing:.2em;opacity:0;transition:opacity 1s;text-shadow:0 0 30px #000}
+#banner small{display:block;font-size:16px;letter-spacing:.1em;font-family:"Noto Sans TC";font-weight:400;color:var(--dim);margin-top:8px}
+#vign{inset:0;background:radial-gradient(ellipse at center,transparent 45%,rgba(120,0,0,.55));opacity:0;transition:opacity .4s}
+#chat{left:14px;bottom:14px;width:min(340px,40vw);font-size:13px;display:flex;flex-direction:column;gap:3px}
+#chat .ln{background:#0009;padding:3px 8px;border-radius:6px;animation:fade 12s forwards}
+#chat .ln b{color:var(--accent)}
+@keyframes fade{0%,80%{opacity:1}100%{opacity:0}}
+#chatIn{position:fixed;left:14px;bottom:14px;width:min(340px,40vw);z-index:9;display:none;font:inherit;font-size:14px;padding:8px 10px;border-radius:8px;border:1px solid var(--line);background:#111;color:#fff}
+#voiceChip{right:14px;bottom:14px}
+/* ---- 隊友狀態面板 ---- */
+#team{position:fixed;right:14px;top:182px;z-index:6;width:236px;font-size:12px;pointer-events:auto;user-select:none}
+#team .th{display:flex;align-items:center;justify-content:space-between;gap:6px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:6px 10px;cursor:pointer;font-weight:700}
+#team .th .warn{color:#ffb3ab;font-weight:700}
+#team .th .arr{color:var(--dim);font-size:11px}
+#team .tb{margin-top:4px;display:flex;flex-direction:column;gap:3px;max-height:46vh;overflow:auto}
+#team.closed .tb{display:none}
+.tm{display:grid;grid-template-columns:10px 1fr auto;gap:2px 7px;align-items:center;background:rgba(14,12,16,.82);border:1px solid rgba(255,255,255,.08);border-left:3px solid var(--fc,#888);border-radius:8px;padding:5px 8px;line-height:1.35}
+.tm .dot{width:9px;height:9px;border-radius:50%;grid-row:span 2}
+.tm .nm{font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tm .st{font-size:11px;text-align:right;white-space:nowrap}
+.tm .sub{grid-column:2 / 4;font-size:10.5px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.tm.off{opacity:.55}
+.dot.on{background:#3fd36b;box-shadow:0 0 6px #3fd36b}.dot.weak{background:#f0c040}.dot.off{background:#e05a4f}
+@media (max-width:900px), (max-height:500px){ #team{top:calc(max(8px,env(safe-area-inset-top)) + 112px);right:max(8px,env(safe-area-inset-right));width:190px;font-size:11px} #team .tb{max-height:38vh} }
+.overlay{position:fixed;inset:0;z-index:20;display:grid;place-items:center;background:radial-gradient(ellipse at 50% 30%,rgba(40,20,14,.82),rgba(0,0,0,.96));overflow:auto;padding:20px}
+.card{width:min(720px,94vw);background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:26px 28px;box-shadow:0 20px 80px #000}
+h1{margin:0;font-family:"Noto Serif TC",serif;font-size:46px;font-weight:900;letter-spacing:.18em;color:var(--accent)}
+h1 small{display:block;font-family:"Noto Sans TC";font-size:12px;letter-spacing:.4em;color:var(--dim);font-weight:400;margin-top:4px}
+h2{font-size:18px;margin:0 0 10px;color:var(--accent)}
+.story{line-height:1.9;color:#ddd3c3;font-size:14.5px}
+.story p{margin:.5em 0}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px 14px;margin:14px 0}
+label.f{display:flex;flex-direction:column;gap:4px;font-size:12px;color:var(--dim)}
+input[type=text],select{font:inherit;font-size:15px;padding:9px 10px;border-radius:8px;border:1px solid #3d3644;background:#16131a;color:#fff}
+.fac{display:flex;gap:8px}
+.fac label{flex:1;border:1px solid #3d3644;border-radius:10px;padding:10px;cursor:pointer;font-size:13px;line-height:1.5}
+.fac input{display:none}
+.fac label:has(input:checked){border-color:var(--accent);background:#2a2316}
+.fac b{display:block;font-size:15px}
+button{font-family:inherit;cursor:pointer}
+.btn{background:var(--accent);color:#1d1504;border:0;border-radius:10px;padding:11px 22px;font-size:15px;font-weight:900;letter-spacing:.08em}
+.btn:disabled{opacity:.4;cursor:default}
+.btn.ghost{background:transparent;color:var(--ink);border:1px solid #ffffff40}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.note{font-size:12px;color:var(--dim);line-height:1.6}
+#plist{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:8px;margin:12px 0}
+.pl{border:1px solid #3d3644;border-radius:10px;padding:8px 10px;font-size:13px}
+.pl .tag{font-size:11px;padding:1px 6px;border-radius:5px;margin-left:4px}
+.tv{background:#1d3550;color:var(--vis)}.tc{background:#4d2a19;color:var(--cap)}.tr{background:#333;color:#ccc}
+#dialog{position:fixed;left:50%;bottom:96px;transform:translateX(-50%);width:min(700px,94vw);z-index:15;display:none}
+#dialog .card{padding:16px 20px}
+#dialog .who{color:var(--accent);font-weight:900;margin-bottom:6px;font-family:"Noto Serif TC",serif}
+#dialog .txt{line-height:1.85;font-size:15.5px;white-space:pre-line}
+#dialog .next{text-align:right;font-size:12px;color:var(--dim);margin-top:6px}
+#keypad .screen{font-size:32px;letter-spacing:.4em;text-align:center;background:#0a090c;border:1px solid #3b3542;border-radius:8px;padding:10px;margin:10px 0 14px;font-variant-numeric:tabular-nums}
+#keypad .kg{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+#keypad .kg button{font-size:21px;padding:13px 0;border-radius:8px;border:1px solid #3b3542;background:#1f1b24;color:#fff;font-weight:700}
+#wheel .wg{display:flex;gap:10px;justify-content:center;margin:14px 0}
+.wcol{display:flex;flex-direction:column;align-items:center;gap:6px}
+.wcol button{width:56px;height:34px;border-radius:8px;border:1px solid #3b3542;background:#1f1b24;color:#fff;font-size:15px}
+.wch{width:56px;height:64px;display:grid;place-items:center;font-family:"Noto Serif TC",serif;font-size:34px;font-weight:900;background:#0a090c;border:1px solid var(--line);border-radius:8px;color:var(--accent)}
+#sdGrid{display:grid;grid-template-columns:repeat(4,64px);gap:0;justify-content:center;margin:14px 0}
+.sd{width:64px;height:64px;font-size:28px;font-weight:900;background:#16131a;color:var(--accent);border:1px solid #3b3542}
+.sd.given{color:#fff;background:#2a2430;cursor:default}
+.sd.bad{color:#ff6b6b;background:#3a1416}
+.sd.br{border-right:3px solid var(--accent)}.sd.bb{border-bottom:3px solid var(--accent)}
+#skGrid{display:grid;justify-content:center;margin:12px 0}
+.sc{width:40px;height:40px;display:grid;place-items:center}
+.sc.w{background:#3a332b;box-shadow:inset 0 0 0 1px #2a241e}.sc.f{background:#16131a}
+.sc i{display:block}
+.sc .goal{width:14px;height:14px;border:2px solid var(--accent);border-radius:50%}
+.sc .bx{width:30px;height:30px;background:#7a7a80;border-radius:4px;box-shadow:inset 0 0 0 3px #4a4a50}
+.sc .bx.on{background:var(--accent);box-shadow:inset 0 0 0 3px #a8842a}
+.sc .pl{width:24px;height:24px;border-radius:50%;background:#7cc4ff}
+.skpad{display:grid;grid-template-columns:repeat(3,44px);gap:4px;justify-content:center}
+.skpad button{height:40px;border-radius:8px;border:1px solid #3b3542;background:#1f1b24;color:#fff}
+.netbar{border-radius:10px;padding:10px 12px;font-size:13px;line-height:1.7;margin:8px 0;background:#1d1a22;border:1px solid #3d3644}
+.netbar.ok{border-color:#2f6b3f;background:#13251a}.netbar.bad{border-color:#8a3a30;background:#2a1412;color:#ffd6cf}
+.grade{display:flex;gap:16px;align-items:center;border:2px solid;border-radius:14px;padding:12px 16px;margin:10px 0 14px;background:#0f0d12}
+.grade .gs{font-size:34px;font-weight:900;letter-spacing:.05em;white-space:nowrap}
+.grade .gn{font-size:22px;font-weight:900}
+.grade .gd{font-size:13px;color:#d8cfbf;line-height:1.6}
+table.res{width:100%;border-collapse:collapse;font-size:13.5px;margin:12px 0}
+table.res td,table.res th{border-bottom:1px solid #ffffff18;padding:7px 6px;text-align:left}
+#paused{position:fixed;inset:0;z-index:12;display:none;place-items:center;background:rgba(0,0,0,.4);font-size:17px;cursor:pointer}
+#help .keys{display:grid;grid-template-columns:auto 1fr;gap:6px 14px;font-size:13.5px;margin:10px 0}
+kbd{background:#2a2630;border:1px solid #4a4452;border-radius:4px;padding:1px 6px;color:#fff;font-family:inherit;font-size:12px}
+#bigmap{position:fixed;inset:0;z-index:14;display:none;place-items:center;background:#000c;pointer-events:none}
+/* ---- 手機操作 ---- */
+canvas#view{touch-action:none}
+#joyZone{position:fixed;left:0;bottom:0;width:45vw;height:60vh;z-index:6;display:none;touch-action:none}
+#joy{position:absolute;width:132px;height:132px;margin:-66px 0 0 -66px;border-radius:50%;background:rgba(255,255,255,.08);border:2px solid rgba(255,255,255,.25);pointer-events:none;left:90px;top:calc(100% - 100px);transition:opacity .2s}
+#joy i{position:absolute;left:50%;top:50%;width:58px;height:58px;margin:-29px 0 0 -29px;border-radius:50%;background:rgba(255,255,255,.35);border:2px solid rgba(255,255,255,.55)}
+#joy.idle{opacity:.45}
+#mBtns{position:fixed;right:max(12px,env(safe-area-inset-right));bottom:max(14px,env(safe-area-inset-bottom));z-index:7;display:none;width:200px;height:200px;touch-action:none}
+#mBtns button{position:absolute;border-radius:50%;border:1px solid rgba(255,255,255,.3);background:rgba(20,18,24,.62);color:#fff;font-size:12px;font-weight:700;display:grid;place-items:center;line-height:1.1;touch-action:none;-webkit-user-select:none;user-select:none}
+#mBtns button.on{background:rgba(233,196,106,.85);color:#1b1505}
+#mAct{right:0;bottom:0;width:92px;height:92px;background:rgba(233,196,106,.9)!important;color:#1b1505!important;font-size:16px!important}
+#mAct.hot{box-shadow:0 0 0 4px rgba(233,196,106,.45)}
+#mRun{right:104px;bottom:6px;width:62px;height:62px}
+#mCrouch{right:110px;bottom:80px;width:54px;height:54px}
+#mFlash{right:52px;bottom:104px;width:54px;height:54px}
+#mDrop{right:0;bottom:110px;width:46px;height:46px}
+#mTop{position:fixed;left:50%;transform:translateX(-50%);top:max(8px,env(safe-area-inset-top));z-index:7;display:none;gap:8px}
+#mTop button{height:34px;padding:0 12px;border-radius:17px;border:1px solid rgba(255,255,255,.25);background:rgba(20,18,24,.7);color:#fff;font-size:12px}
+#rotateHint{position:fixed;inset:0;z-index:30;display:none;place-items:center;background:#000d;color:#fff;font-size:16px;text-align:center;padding:30px}
+body.touch #chat{bottom:auto;top:calc(max(8px,env(safe-area-inset-top)) + 44px);left:50%;transform:translateX(-50%);width:min(360px,50vw);align-items:center;font-size:12px}
+body.touch #chatIn{bottom:auto;top:60px;left:50%;transform:translateX(-50%);width:min(360px,80vw)}
+body.touch #inv{bottom:max(10px,env(safe-area-inset-bottom));pointer-events:auto;z-index:8}
+body.touch .slot{min-width:52px;height:50px;font-size:10px}
+body.touch #prompt{top:auto;bottom:80px;font-size:15px;padding:6px 14px}
+body.touch #hold{top:auto;bottom:118px}
+body.touch #voiceChip{display:none!important}
+body.touch #role{max-height:calc(1.55em + 10px);overflow:hidden;pointer-events:auto;cursor:pointer}
+body.touch #role::after{content:"▾ 點開看任務";display:block;font-size:10px;color:var(--dim)}
+body.touch #role.open::after{content:"▴ 收起"}
+body.touch #role.open{max-height:none}
+@media (max-width:900px), (max-height:500px){
+  .chip{font-size:11px;padding:5px 9px}
+  #phase{font-size:13px}
+  #tl{max-width:min(300px,42vw);gap:5px;left:max(8px,env(safe-area-inset-left));top:max(8px,env(safe-area-inset-top))}
+  #mini{width:130px;height:104px;right:max(8px,env(safe-area-inset-right));top:max(8px,env(safe-area-inset-top))}
+  #dialog{bottom:auto;top:12px}
+  #dialog .txt{font-size:14px}
+  .card{padding:16px 16px}
+}
+.credit{font-size:11px;color:#857c70;margin-top:14px;line-height:1.6}
+.credit a{color:#c2b080}
+@media (max-width:640px){.grid2{grid-template-columns:1fr}h1{font-size:34px}}
+</style>
+<script type="importmap">
+{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.170.0/build/three.module.js","three/addons/":"https://cdn.jsdelivr.net/npm/three@0.170.0/examples/jsm/"}}
+</script>
+</head>
+<body>
+<canvas id="view"></canvas>
+
+<div id="vign" class="hud"></div>
+<div id="flashFx" class="hud" style="inset:0;background:#fff;opacity:0"></div>
+<div id="tl" class="hud">
+  <div class="chip" id="phase">準備中<span class="t"></span></div>
+  <div class="chip" id="role"></div>
+  <div class="chip" id="statusChip" style="display:none"></div>
+</div>
+<canvas id="mini" class="hud" width="200" height="160"></canvas>
+<div id="team" style="display:none"><div class="th" id="teamHead"></div><div class="tb" id="teamBody"></div></div>
+<div id="crosshair" class="hud"></div>
+<div id="prompt" class="hud"></div>
+<div id="hold" class="hud"><i></i></div>
+<div id="toast" class="hud"></div>
+<div id="banner" class="hud"></div>
+<div id="inv" class="hud"></div>
+<div id="chat" class="hud"></div>
+<div id="voiceChip" class="hud chip" style="display:none"></div>
+<input id="chatIn" maxlength="60" placeholder="說話（附近的人看得到）… Enter 送出 / Esc 取消">
+<div id="bigmap"><canvas id="bigc" width="800" height="640"></canvas></div>
+
+<div id="dialog"><div class="card"><div class="who"></div><div class="txt"></div><div class="next">點擊或按 <kbd>E</kbd> / <kbd>空白</kbd> 繼續</div></div></div>
+<div id="paused">點擊畫面繼續</div>
+<div id="joyZone"><div id="joy" class="idle"><i></i></div></div>
+<div id="mBtns">
+  <button id="mAct">互動</button>
+  <button id="mRun">奔跑</button>
+  <button id="mCrouch">蹲下</button>
+  <button id="mFlash">🔦</button>
+  <button id="mDrop">丟下</button>
+</div>
+<div id="mTop"><button id="mChat">💬 說話</button><button id="mMap">🗺 地圖</button><button id="mHelp">❔ 說明</button><button id="mFull">⛶ 全螢幕</button></div>
+<div id="rotateHint">📱↻<br><br>把手機轉成橫向，操作會比較順手<br><br><button class="btn" id="rotateOk">直接玩</button></div>
+
+<!-- 入口 -->
+<div id="lobby" class="overlay"><div class="card">
+  <h1>可愛捉迷藏<small>CUTE HIDE &amp; SEEK · 白楊之家</small></h1>
+  <div class="story">
+    <p>1994 年夏天，颱風夜停電。山城外的育幼院「白楊之家」裡，白老師讓孩子們玩大家最愛的「可愛捉迷藏」：當鬼的人要戴上孩子們畫的笑臉面具，被抓到的人要去禱告室「坐牢」，點著蠟燭的角落是「基地」，鬼不能進去。</p>
+    <p>那天當鬼的是雜工老周。天亮時，有四個孩子怎麼找都找不到。鎮上的人認定是老周把孩子藏了起來，把他鎖在院裡，用鐵鍊纏住大門。從此，白楊之家再也沒有人住過。</p>
+    <p>三十年後，<b style="color:var(--vis)">拜訪者</b>各懷目的推開了生鏽的大門；<b style="color:var(--cap)">被囚者</b>比他們早到一晚，醒來時已被銬在禱告室的長椅上。從早上到深夜，你們有四段時間。入夜後，走廊會響起鐵鍊拖地的聲音──老周還在找。「還差四個。」</p>
+  </div>
+  <div class="grid2">
+    <label class="f">你的名字<input type="text" id="nameIn" maxlength="10" placeholder="例如：小靈"></label>
+    <label class="f">房間代碼（英文或數字，同代碼＝同一局）<input type="text" id="roomIn" maxlength="12" autocapitalize="characters" autocomplete="off" spellcheck="false"></label>
+  </div>
+  <div class="fac">
+    <label><input type="radio" name="fac" value="v" checked><b style="color:var(--vis)">拜訪者</b>從庭院出發，可自由行動</label>
+    <label><input type="radio" name="fac" value="c"><b style="color:var(--cap)">被囚者</b>從禱告室出發，雙手被銬</label>
+    <label><input type="radio" name="fac" value="r"><b>隨機</b>由房主分配</label>
+  </div>
+  <div class="row" style="margin-top:12px" id="micRow"><label class="note"><input type="checkbox" id="micIn" checked> 啟用麥克風（只在語音區內、且靠近彼此時才聽得到）</label></div>
+  <div class="row" style="margin-top:16px">
+    <button class="btn" id="joinBtn" disabled>載入中…</button>
+    <button class="btn ghost" id="soloBtn" disabled>單人遊玩</button>
+    <span class="note" id="netNote"></span>
+  </div>
+  <div class="credit">原創故事練習作品，非商業。3D 素材：<a href="https://github.com/dandacompany/deskrpg">DeskRPG</a> © Dante Labs，依 Sustainable Use License 非商業使用（全文見 assets/LICENSE.txt），已修改其配置與用途；角色模型改作自 Quaternius（CC0）。</div>
+</div></div>
+
+<!-- 等待室 -->
+<div id="room" class="overlay" style="display:none"><div class="card">
+  <h2>等待室 · 房間 <span id="roomCode"></span></h2>
+  <div id="netStatus"></div>
+  <div class="note" id="hostNote"></div>
+  <div id="plist"></div>
+  <div class="grid2" id="hostSet">
+    <label class="f">遊戲時長（早／午／晚／深夜）<select id="durSel"><option value="0">短：1.5／1.5／1.5／8 分</option><option value="1" selected>標準：2.5／2.5／2.5／12 分</option><option value="2">長：3.5／3.5／3.5／15 分</option></select></label>
+    <label class="f">語音範圍<select id="vmSel"><option value="room">只有告解室（語音小房間）</option><option value="near">全地圖、靠近才聽得到</option></select></label>
+  </div>
+  <div class="row"><button class="btn" id="startBtn">開始遊戲</button><span class="note">最多 8 人；人數少也能玩。</span></div>
+</div></div>
+
+<!-- 密碼鎖 -->
+<div id="keypad" class="overlay" style="display:none"><div class="card" style="width:min(330px,92vw)">
+  <div style="font-weight:900;color:var(--accent)" id="kpTitle">保險箱</div>
+  <div class="screen" id="kpScreen">····</div>
+  <div class="kg" id="kpGrid"></div>
+  <div class="row" style="margin-top:12px;justify-content:flex-end"><button class="btn ghost" id="kpClose">離開</button></div>
+</div></div>
+
+<!-- 字輪鎖 -->
+<div id="wheel" class="overlay" style="display:none"><div class="card" style="width:min(360px,92vw)">
+  <div style="font-weight:900;color:var(--accent)" id="whTitle">字輪鎖</div>
+  <div class="wg" id="whGrid"></div>
+  <div class="row" style="justify-content:flex-end"><button class="btn ghost" id="whClose">離開</button><button class="btn" id="whOk">轉開</button></div>
+</div></div>
+<!-- 數獨 -->
+<div id="sudoku" class="overlay" style="display:none"><div class="card" style="width:min(380px,94vw)">
+  <div style="font-weight:900;color:var(--accent)">講台抽屜的數獨鎖</div>
+  <div id="sdGrid"></div>
+  <div class="note" id="sdMsg"></div>
+  <div class="row" style="justify-content:flex-end;margin-top:10px"><button class="btn ghost" id="sdClose">離開</button></div>
+</div></div>
+<!-- 推箱子 -->
+<div id="soko" class="overlay" style="display:none"><div class="card" style="width:min(420px,94vw)">
+  <div style="font-weight:900;color:var(--accent)">滑塊工具箱</div>
+  <div class="note">把三塊鐵塊（灰色）推到圓圈記號上。只能推，不能拉。</div>
+  <div id="skGrid"></div>
+  <div class="note" id="skMsg"></div>
+  <div class="row" style="justify-content:space-between;margin-top:8px">
+    <div class="skpad"><span></span><button data-mv="0,-1">▲</button><span></span><button data-mv="-1,0">◀</button><button data-mv="0,1">▼</button><button data-mv="1,0">▶</button></div>
+    <div class="row"><button class="btn ghost" id="skReset">重來</button><button class="btn ghost" id="skClose">離開</button></div>
+  </div>
+</div></div>
+
+<!-- 結算 -->
+<div id="ending" class="overlay" style="display:none"><div class="card">
+  <h1 id="endTitle"></h1>
+  <div class="story" id="endText"></div>
+  <table class="res" id="endTable"></table>
+  <div class="row"><button class="btn" id="againBtn">回到等待室</button><span class="note" id="againNote"></span></div>
+</div></div>
+
+<!-- 說明 -->
+<div id="help" class="overlay" style="display:none"><div class="card">
+  <h2>操作與規則</h2>
+  <div class="keys">
+    <kbd>W A S D</kbd><span>移動　<kbd>Shift</kbd> 奔跑（會發出聲音）　<kbd>C</kbd> 蹲下（安靜、較難被看見）</span>
+    <kbd>滑鼠</kbd><span>看向四周（點擊畫面鎖定）</span>
+    <kbd>E</kbd><span>調查／拾取／開關門（部分動作需按住）</span>
+    <kbd>Q</kbd><span>丟下手上最後一個道具（可交給隊友）</span>
+    <kbd>1–9</kbd><span>檢視道具（日記要打開來讀）</span>
+    <kbd>F</kbd><span>手電筒（深夜很必要，但會讓祂更容易發現你）</span>
+    <kbd>Enter</kbd><span>說話（附近的人看得到）　<kbd>V</kbd> 麥克風開關</span>
+    <kbd>M</kbd><span>按住看大地圖　<kbd>T</kbd> 收合／展開隊友狀態　<kbd>Tab</kbd> 說明</span>
+  </div>
+  <div class="story" style="font-size:13.5px">
+    <p>⏳ 時間分為 <b>早上 → 中午 → 傍晚 → 深夜</b>。深夜時「祂」會出來巡視、開關房門；祂有視野範圍，背對你時看不到。</p>
+    <p>⛓ 老周（祂）腳上拖著鐵鍊，<b>聽到鐵鍊聲就快躲回點著蠟燭的「基地」</b>（地圖上的金色格）。照遊戲規則，鬼不能進基地；就算正在追你，祂也會當作沒看到而離開──但會一直找到天亮。</p>
+    <p>👁 被祂看見不會馬上被抓──祂會追過來，<b>被碰到才算抓住</b>。祂會把你拖回禱告室、重新銬在長椅上，要等隊友帶「手銬鑰匙」來救（髮夾只能用一次）。天亮時還被銬著就輸了。</p>
+    <p>🚪 <b>主線（大家一起）</b>：大門有三道鎖──鐵鍊（斷線鉗）、大鎖（兩段大門鑰匙）、以及<b>只有深夜才撕得下的封條</b>。線索散落在各個房間，常常要跨房間對照：配餐表、黑板、帳本、紫外光下的字、藏頭詩、數獨、推箱子……</p>
+    <p>🧰 道具可以交給隊友（Q 丟下、對方撿起）。紫外線手電筒拿在身上時，才看得見隱藏的字。</p>
+    <p>☠ <b>深夜時，還在院內的人全部被抓（或都被銬著）就全員出局。</b></p>
+    <p>👤 每個角色另有兩個較簡單的個人任務，結算時會顯示。</p>
+  </div>
+  <div class="row"><button class="btn" id="helpClose">回到遊戲</button></div>
+</div></div>
+
+<script>window.HS_MODE="p2p";</script>
+<script src="https://cdn.jsdelivr.net/npm/peerjs@1.5.4/dist/peerjs.min.js"></script>
+<script type="module" src="game.js"></script>
+</body>
+</html>

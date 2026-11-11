@@ -976,6 +976,7 @@ const keys = {};
 
 function pres(p) { Object.assign(pend, p); }
 setInterval(() => { if (!net) return; if (Object.keys(pend).length) { net.set(pend); pend = {}; } }, 70);
+let hbN = 0; setInterval(() => { if (net) pres({ hb: ++hbN % 100000 }); }, 2000);
 function act(t, a = 0) { mySeq++; myQ.push([mySeq, t, a]); myQ = myQ.slice(-6); pres({ q: myQ }); }
 let hostMode = false, joinedAt = 0;
 function hostId() {
@@ -1379,6 +1380,7 @@ addEventListener('keydown', e => {
   if (k === 'c') me.crouch = !me.crouch;
   if (k === 'v' && voice) { voice.muted = !voice.muted; toast(voice.muted ? '麥克風已靜音' : '麥克風已開啟'); }
   if (k === 'm') $('bigmap').style.display = 'grid';
+  if (k === 't') toggleTeam();
   if (/^[1-9]$/.test(k)) inspect(+k - 1);
 });
 addEventListener('keyup', e => { const k = e.key.toLowerCase(); keys[k] = false; if (k === 'm') $('bigmap').style.display = 'none'; if (k === 'e') holdT = 0; });
@@ -1688,6 +1690,43 @@ function updateVoice() {
   me.talking = voice.tick(canTalk());
 }
 
+// ===================== 隊友狀態面板 =====================
+const teamSeen = new Map(); // id -> { hb, t }
+let teamClosed = false, teamT = 0;
+try { teamClosed = localStorage.getItem('hs-team-closed') === '1'; } catch {}
+function toggleTeam() { teamClosed = !teamClosed; try { localStorage.setItem('hs-team-closed', teamClosed ? '1' : '0'); } catch {} renderTeam(true); }
+$('teamHead').addEventListener('click', toggleTeam);
+const ST_TXT = { f:['行動中','#9fe08a'], c:['被銬住','#ffb38a'], d:['被拖走中','#ff6b6b'], j:['被關住','#ff6b6b'], e:['已逃脫','#7cc4ff'], x:['出局','#888'] };
+function renderTeam(force) {
+  const box = $('team');
+  if (!W || W.st !== 'play' || !net || net instanceof LocalNet) { box.style.display = 'none'; return; }
+  box.style.display = 'block'; box.classList.toggle('closed', teamClosed);
+  const now = performance.now(); if (!force && now - teamT < 500) return; teamT = now;
+  const peers = new Map(net.peers().map(p => [p.id, p]));
+  for (const [id, p] of peers) { const hb = p.p.hb, s0 = teamSeen.get(id); if (!s0 || s0.hb !== hb) teamSeen.set(id, { hb, t: now }); }
+  const rows = []; let off = 0, total = 0;
+  const order = Object.keys(W.pl).sort((a, b) => (a === myId ? -1 : b === myId ? 1 : 0));
+  for (const id of order) {
+    const P = W.pl[id], p = peers.get(id), me_ = id === myId; total++;
+    let conn = 'on', connTxt = '';
+    if (!me_) {
+      if (!p) { conn = 'off'; connTxt = '已斷線'; }
+      else { const age = (now - (teamSeen.get(id)?.t ?? now)) / 1000; if (age > 12) { conn = 'off'; connTxt = `${Math.round(age)} 秒沒回應`; } else if (age > 5) { conn = 'weak'; connTxt = '訊號不穩'; } }
+    }
+    if (conn === 'off' && P.s !== 'e') off++;
+    const [stTxt, stCol] = ST_TXT[P.s] || ['—', '#aaa'];
+    const pos = me_ ? [me.x, me.z] : p?.p.p;
+    const room = pos ? (roomAt(pos[0], pos[1])?.name || (pos[1] >= 31 ? '大門外' : '院外')) : '—';
+    const dist = !me_ && pos && P.s !== 'e' ? `・${Math.round(Math.hypot(pos[0] - me.x, pos[1] - me.z))}m` : '';
+    const task = `任務 ${(P.t & 1 ? 1 : 0) + (P.t & 2 ? 1 : 0)}/2`;
+    const items = me_ ? '' : Object.entries(W.it).filter(([, v]) => v === id).map(([k]) => ITEMS[k]?.ic || '').join('');
+    rows.push(`<div class="tm ${conn === 'off' ? 'off' : ''}" style="--fc:${FAC_COL[P.f]}"><span class="dot ${conn}"></span><span class="nm">${esc(P.n)}${me_ ? '（你）' : ''}${p?.p.tk ? ' 🔊' : ''}</span><span class="st" style="color:${conn === 'off' ? '#ff8f85' : stCol}">${conn === 'off' ? connTxt : stTxt}</span><span class="sub">${ROLES[P.r]?.n || ''}・${P.s === 'e' ? '已離開院內' : room + dist}・${task}${items ? '・' + items : ''}${conn === 'weak' ? '・⚠ ' + connTxt : ''}</span></div>`);
+  }
+  const selfOff = (net.conn === false && !(net instanceof WsNet)) || (net instanceof WsNet && net.ws?.readyState !== 1);
+  $('teamHead').innerHTML = `<span>👥 隊友 ${total - off}/${total}${selfOff ? ` <span class="warn">⚠ ${net instanceof WsNet ? '你的連線中斷了，請重新整理頁面' : '你的連線中斷，重新連線中…'}</span>` : off ? ` <span class="warn">⚠ ${off} 人斷線</span>` : ''}</span><span class="arr">${teamClosed ? '展開 ▾' : '收合 ▴'}　T</span>`;
+  $('teamBody').innerHTML = rows.join('');
+}
+
 // 小地圖
 function drawMap(cv, s, big) {
   const g = cv.getContext('2d'); g.clearRect(0, 0, cv.width, cv.height);
@@ -1791,9 +1830,9 @@ function loop() {
   const gk = W.st + ':' + W.g0;
   if (gk !== gameKey) {
     gameKey = gk;
-    if (W.st === 'lobby') { me.spawned = false; showLobbyRoom(); }
+    if (W.st === 'lobby') { me.spawned = false; showLobbyRoom(); $('team').style.display = 'none'; }
     if (W.st === 'play') { $('room').style.display = 'none'; $('ending').style.display = 'none'; inLobby = false; me.spawned = false; globMsgI = W.msg?.i || 0; lastPhase = -1; updateHUD.sig = null; }
-    if (W.st === 'end') showEnding();
+    if (W.st === 'end') { showEnding(); $('team').style.display = 'none'; }
   }
   if (W.st === 'lobby' && performance.now() - lobbyT > 500) { lobbyT = performance.now(); showLobbyRoom(); }
   if (W.st === 'play') {
@@ -1814,7 +1853,7 @@ function loop() {
     $('prompt').style.display = current ? 'block' : 'none';
     if (current) $('prompt').textContent = (document.body.classList.contains('touch') ? '👆 ' : '[E] ') + current.text;
     if (current?.hold && (keys.e || keys._act)) { holdT += dt; if (current.noisy && Math.random() < dt * 2.5) { nzI++; pres({ nz:nzI }); } $('hold').style.display = 'block'; $('hold').firstChild.style.width = Math.min(100, holdT / current.hold * 100) + '%'; if (holdT >= current.hold) { holdT = 0; current.go(W); } } else { $('hold').style.display = 'none'; if (!keys.e) holdT = 0; }
-    updateHUD(); updateVoice(); updateWorldView(dt);
+    updateHUD(); updateVoice(); updateWorldView(dt); renderTeam();
   } else if (lastPhase !== -2) { lastPhase = -2; applyPhase(); }
   if (W.st === 'end' && $('ending').style.display === 'none') showEnding();
   // 自己的 presence
