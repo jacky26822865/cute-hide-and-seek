@@ -73,8 +73,8 @@ const PHASES = [
 const DUR = [[90,90,90,480],[150,150,150,720],[210,210,210,900]];
 const ROLES = [
   { f:'v', n:'記者',       tasks:['替三處證據拍照：大廳照片牆、懲戒室、院長室保險箱', '在院長室書櫃找到「失蹤兒童名單」'] },
-  { f:'v', n:'前院童',     tasks:['找回小時候的舊玩偶，帶著它逃出去或放上祭壇', '在宿舍牆上找到自己當年的刻痕'] },
-  { f:'v', n:'警探',       tasks:['找到並讀完院長日記', '用紫外線手電筒在懲戒室門內側找到指紋'] },
+  { f:'v', n:'前院童',     tasks:['找回小時候的布偶，帶著它逃出去或放上祭壇', '在宿舍牆上找到自己當年的刻痕'] },
+  { f:'v', n:'警探',       tasks:['找到並讀完白老師的日記', '用紫外線手電筒在懲戒室門內側找到指紋'] },
   { f:'v', n:'神父',       tasks:['在禱告室祭壇前為孩子們禱告（按住 E）', '依正確順序點亮祭壇的四支蠟燭'] },
   { f:'c', n:'尋親的姊姊', tasks:['在懲戒室找到妹妹留下的名牌', '在教室找到妹妹畫的那張圖'] },
   { f:'c', n:'小偷',       tasks:['親手打開院長室的保險箱', '用撬棍撬開餐廳的捐款箱'] },
@@ -92,23 +92,23 @@ const ITEMS = {
   gk2:{ n:'大門鑰匙（下半）', ic:'🔩', d:'一把大鑰匙的下半段。和上半段合在一起就能用。' },
   gk:{ n:'大門鑰匙', ic:'🗝️', d:'拼好的正門鑰匙，可以打開大門上的大鎖。' },
   windkey:{ n:'發條鑰匙', ic:'🔧', d:'小小的黃銅發條鑰匙。大廳好像有個音樂盒。' },
-  diary:{ n:'院長日記', ic:'📕', d:'' },
-  doll:{ n:'舊玩偶', ic:'🧸', d:'縫線脫落的布偶，背後繡著「小安」。是孩子們的遺物之一。' },
-  tag:{ n:'褪色的名牌', ic:'🏷️', d:'名牌上寫著「莉莎，5 歲」。背面用指甲刻著：姊姊。是孩子們的遺物之一。' },
-  photo:{ n:'院童合照', ic:'🖼️', d:'照片裡每個孩子都在笑，笑得一模一樣。是孩子們的遺物之一。' },
+  diary:{ n:'白老師的日記', ic:'📕', d:'' },
+  doll:{ n:'舊布偶', ic:'🧸', d:'縫線脫落的布偶，背後繡著「阿和」。是孩子們留下的東西之一。' },
+  tag:{ n:'褪色的名牌', ic:'🏷️', d:'名牌上寫著「莉莉，5 歲」。背面用指甲刻著：姊姊。是孩子們留下的東西之一。' },
+  photo:{ n:'院童合照', ic:'🖼️', d:'照片裡孩子們都在笑，後面站著一個戴笑臉紙面具的大個子。是孩子們留下的東西之一。' },
 };
 const RELICS = ['doll','diary','tag','photo'];
 const DIARY = [
-  '「1998 年 3 月。孩子們說，喜歡我笑的樣子。所以我一直笑著。」',
-  '「2005 年 11 月。他們一個一個被帶走了。我去報警，警察看著我的笑臉，說我在說謊。」',
-  '「我把他們的東西收好了：小安的玩偶、莉莎的名牌、那張大家都在笑的合照。」',
-  '「如果有一天，有人在月亮升起的時候，把孩子們的東西帶回祭壇──也許祂就能想起來，自己原本是誰。」',
-  '最後一頁被撕掉了。',
+  '「1994 年 7 月。老周的臉被燙傷以後，孩子們都怕他。阿豆畫了一張笑臉面具送他，從此他就成了大家最喜歡的鬼。」',
+  '「颱風夜停電了。我讓孩子們玩『可愛捉迷藏』安撫大家。天亮的時候，小晴、阿豆、大樹、莉莉都不見了。」',
+  '「鎮上的人說是老周做的，把他鎖在院裡，用鐵鍊纏住大門。可是我知道，他找得比誰都認真。」',
+  '「我把孩子們的東西收好了：阿和的布偶、莉莉的名牌、那張大家都在笑的合照。」',
+  '「如果有一天，有人在月亮升起時把這些東西帶回祭壇──也許老周就會知道，孩子們已經被找到了。」',
 ];
 const LORE = {
-  well:['井口的石頭上刻著一段話：','「祂戴著微笑，因為孩子們說喜歡祂笑。」','「祂的腳上有鐐銬，走起來會響。聽見鐵鍊聲，就躲進點著蠟燭的角落──祂不會進去那裡。」'],
+  well:['井口的石頭上刻著孩子歪歪扭扭的字：','「可愛捉迷藏的規則：鬼要戴笑臉。被抓到的人要去禱告室坐牢。」','「點蠟燭的角落是基地，鬼不能進去。聽到鐵鍊聲，就快回基地！」'],
   conf:['告解室的木格窗後面貼著一張紙條：','「這裡很安靜，說話的聲音傳不出去。」','「如果你們要商量什麼，就在這裡說吧。」'],
-  notice:['大廳的公告欄：','「熄燈後禁止在走廊奔跑。院長會聽見。」','「安全角落永遠點著蠟燭。害怕的時候，就去那裡。」','「大門的封印，只有月亮升起時才撕得下來。」'],
+  notice:['大廳的公告欄：','「熄燈後禁止在走廊奔跑。」','「基地永遠點著蠟燭。害怕的時候，就去那裡。」','「大門的封條，只有月亮升起時才撕得下來。」'],
   poem:['禱告室牆上掛著一首詩：','床頭燭影伴孤眠','下弦月冷照庭前','第一聲鐘人未醒','三更笑語夢中連','……把每一句的第一個字連起來讀看看。'],
   candlehint:['祭壇旁的小木牌：','「點燈之前，先讓看不見的字現形。」','「由最小的開始。」'],
   menu:['牆上的配餐表：','週一 3 ｜ 週二 5 ｜ 週三 9 ｜ 週四 17','週五 □ ｜ 週六 □','下面潦草地寫著：「櫥櫃密碼＝週五和週六的數字。」'],
@@ -117,25 +117,25 @@ const LORE = {
   uvtable:['紫光下，牆上浮現出一張對照表：','☆＝3　◇＝8　△＝5','○＝2　□＝7'],
   nouv:['牆面上有被擦掉的痕跡。','好像寫過什麼，但肉眼看不見。'],
   cellclue:['牆上用粉筆寫著：','「排隊囉！由最小的孩子開始，只喊名字的第一個字。」','（木箱上的字輪鎖有四格）'],
-  cellwall:['牆上用指甲刻滿了字：','「姊姊，救我。──莉莎」'],
+  cellwall:['牆上用指甲刻滿了字：','「姊姊，我在這裡。──莉莉」'],
   dorm:['宿舍牆上的規定：','「孩子們依床號就寢：一號床在最西邊。」','「熄燈後不准說話。」'],
-  photowall:['照片牆上掛滿了合照。','每一張裡，孩子們都在笑。笑得一模一樣。','角落的位置，有一張照片沒有被釘牢。'],
-  altar:['祭壇的石面上刻著：','「當月亮升起，讓祂想起孩子們。」','似乎可以把孩子們的遺物放在上面。'],
-  files:['書櫃裡夾著一份名單：','「2005 年 送出名單：安娜、米哈、伊凡、莉莎……」','後面還有好多名字，每一個都被畫上了笑臉。'],
-  drawings:['牆上貼滿孩子們的蠟筆畫。','每張畫裡都有一個高高的黑色人影，臉上畫著大大的笑。','角落有一張署名「莉莎」：畫裡的黑影，腳上拖著鐵鍊。'],
+  photowall:['照片牆上掛滿了合照。','每一張裡，孩子們都笑得很開心，後面總站著一個戴紙面具的大個子。','角落的位置，有一張照片沒有被釘牢。'],
+  altar:['祭壇的石面上刻著：','「月亮升起的時候，把他們帶回來。」','似乎可以把孩子們留下的東西放在上面。'],
+  files:['書櫃裡夾著一份名單：','「1994 年 颱風夜 未尋獲：小晴、阿豆、大樹、莉莉」','名單旁邊有人用紅筆寫了好多遍：還差四個。'],
+  drawings:['牆上貼滿孩子們的蠟筆畫。','每張畫裡都有一個高高的大個子，戴著笑臉面具在找人。','角落有一張署名「莉莉」：畫裡的大個子在哭，腳上拖著鐵鍊。'],
   piano:['你按下一個琴鍵。','走音的琴聲在屋子裡迴盪了很久……','好像有什麼東西，停下了腳步。'],
   musicbox:['桌上有個小小的音樂盒，發條已經鬆了。','底部有個小孔，需要發條鑰匙。'],
-  lab:['木箱上放著一本實驗紀錄，箱子扣著兩位數的密碼鎖。','「笑容測試：5、10、20、40、□」','「箱子的密碼就是空格。」'],
-  fire:['壁爐裡只剩冷掉的灰。','灰燼裡有一張燒了一半的紙：「……祂不會進去有燭光的地方……」'],
+  lab:['木箱上放著一本調查筆記，箱子扣著兩位數的密碼鎖。','「鐵鍊聲紀錄：第一晚 5 次、第二晚 10 次、20、40、□」','「箱子的密碼就是空格。」'],
+  fire:['壁爐裡只剩冷掉的灰。','灰燼裡有一張燒了一半的紙：「……老周不會進去有燭光的地方，那是遊戲規則……」'],
   donation:['一個上了鎖的木製捐款箱，投幣口被釘死了。','用撬棍應該撬得開。'],
   shedsign:['工具間的門被木板釘死了。','需要撬棍。'],
   sokoinfo:['工作台上有個奇怪的工具箱，箱蓋是一個滑塊機關。','把三塊鐵塊推到刻著記號的位置，箱子才會打開。'],
-  gate:['大門上了三道鎖：','① 纏繞的粗鐵鍊（需要斷線鉗）','② 一把大掛鎖（需要完整的大門鑰匙）','③ 一張畫著笑臉的封印──只有深夜才撕得下來'],
+  gate:['大門上了三道鎖：','① 纏繞的粗鐵鍊（需要斷線鉗）','② 一把大掛鎖（需要完整的大門鑰匙）','③ 一張畫著笑臉的封條──只有深夜才撕得下來'],
   cupboard:['櫥櫃裡排滿了玻璃罐，標籤都被撕掉了。'],
   crate:['木箱裡塞滿了發霉的舊衣服。'],
   bedEmpty:['床底下只有灰塵和一隻死掉的蛾。'],
 };
-const BEDS = [['安娜',7],['米哈',3],['伊凡',9],['莉莎',5]];
+const BEDS = [['小晴',7],['阿豆',3],['大樹',9],['莉莉',5]];
 const CANDLE_ORDER = [2, 1, 3, 0];               // 依紫外光下的算式由小到大：III(1) II(4) IV(6) I(9)
 const CANDLE_EQ = ['3×3', '2+2', '10−9', '4+2'];
 const LOCKUI = {
@@ -143,11 +143,11 @@ const LOCKUI = {
   storage:{ type:'pad', len:4, t:'儲藏室門上的密碼鎖' },
   safe:{ type:'pad', len:4, t:'院長室保險箱' },
   lab:{ type:'pad', len:2, t:'實驗紀錄箱' },
-  cellbox:{ type:'wheel', n:4, chars:['安','伊','米','莉','笑','院'], t:'木箱上的字輪鎖' },
+  cellbox:{ type:'wheel', n:4, chars:['小','阿','大','莉','笑','家'], t:'木箱上的字輪鎖' },
   sudoku:{ type:'sudoku', t:'講台抽屜的數獨鎖' },
   sokoban:{ type:'soko', t:'滑塊工具箱' },
 };
-const CODES = { kitchen:'3365', storage:'1321', safe:'5357', lab:'80', cellbox:'米莉安伊' };
+const CODES = { kitchen:'3365', storage:'1321', safe:'5357', lab:'80', cellbox:'阿莉小大' };
 const LOCK_AT = { kitchen:[5,2.4], storage:[23.5,4.5], safe:[37.4,2.6], lab:[22.3,3.3], cellbox:[17.6,4.5], sudoku:[24,16], sokoban:[35.5,28.9] };
 const SUDOKU_P = [[0,0,0,4],[0,4,0,0],[0,0,3,0],[2,0,0,0]];
 const SUDOKU_S = [[3,2,1,4],[1,4,2,3],[4,1,3,2],[2,3,4,1]];
@@ -402,7 +402,7 @@ function buildWorld() {
     scene.add(pivot); doorMeshes[d.id] = { pivot, base: pivot.rotation.y, cur: 0, dir: alongZ ? (d.z <= 9 ? 1 : -1) : -1, boards };
   }
   box(2, 0.8, 1, mat(0xffffff, { map: TEX.wall }), 20, 2.8, 21.5);
-  // 正門：鐵鍊、大鎖、封印
+  // 正門：鐵鍊、大鎖、封條
   const iron = mat(0x1b1b1d, { metalness: .7, roughness: .4 });
   gateL = new THREE.Group(); gateR = new THREE.Group(); gateL.position.set(19, 0, 31.5); gateR.position.set(21, 0, 31.5);
   for (const [g, s] of [[gateL, 1], [gateR, -1]]) { for (let i = 0; i < 7; i++) box(0.05, 2.6, 0.05, iron, s * (0.08 + i * 0.14), 1.3, 0, g); box(1, 0.08, 0.06, iron, s * .5, 2.4, 0, g); box(1, 0.08, 0.06, iron, s * .5, 0.4, 0, g); scene.add(g); }
@@ -434,7 +434,7 @@ function buildWorld() {
 
   // ---------------- 懲戒室 ----------------
   for (let i = 0; i < 3; i++) for (let k = 0; k < 8; k++) { const l = new THREE.Mesh(new THREE.TorusGeometry(0.06, 0.014, 6, 12), chainM); l.position.set(14.2 + i * 2.2, 2.2 - k * 0.11, 1.08); l.rotation.y = k % 2 ? Math.PI / 2 : 0; scene.add(l); }
-  onWall(textPlane(['姊姊 救我', '──莉莎'], 1.2, .6, { bg:'#6b6156', fg:'#2a221b', size:60 }), 16.5, 1.4, 1.02, 'n');
+  onWall(textPlane(['姊姊 我在這裡', '──莉莉'], 1.2, .6, { bg:'#6b6156', fg:'#2a221b', size:60 }), 16.5, 1.4, 1.02, 'n');
   addI({ id:'cellwall', x:16.5, z:1.8, label: w => w.it.tag === 'w' ? '撿起牆角的名牌' : '看看牆上的刻字', go: w => { dlg('懲戒室', LORE.cellwall); if (w.it.tag === 'w') act('cont', 'tag'); } });
   onWall(textPlane(['排隊囉！', '由最小的孩子開始', '只喊名字的第一個字'], 1.5, 1, { bg:'#25282a', fg:'#e8e8e0', size:44 }), 13.02, 1.6, 4.5, 'w');
   addI({ id:'cellclue', x:13.9, z:4.5, label: () => '看看牆上的粉筆字', go: () => dlg('懲戒室', LORE.cellclue) });
@@ -521,7 +521,7 @@ function buildWorld() {
   const pw = new THREE.Group(); pw.position.set(16.6, 1.75, 13.03); scene.add(pw);
   for (let i = 0; i < 6; i++) { const f = makePhoto(i); f.scale.setScalar(.85); f.position.set(-1.35 + (i % 3) * .95, i >= 3 ? -.6 : .05, 0); pw.add(f); }
   addI({ id:'photowall', x:16.6, z:13.7, label: w => w.it.photo === 'w' ? '取下沒釘牢的照片' : '查看照片牆', go: w => { dlg('照片牆', LORE.photowall); if (w.it.photo === 'w') act('cont', 'photo'); } });
-  onWall(textPlane(['公告', '熄燈後禁止奔跑', '大門封印只在深夜撕得下'], 1.2, .9, { size:40 }), 13.02, 1.6, 15.2, 'w');
+  onWall(textPlane(['公告', '熄燈後禁止奔跑', '大門封條只在深夜撕得下'], 1.2, .9, { size:40 }), 13.02, 1.6, 15.2, 'w');
   addI({ id:'notice', x:13.8, z:15.2, label: () => '查看公告欄', go: () => dlg('公告欄', LORE.notice) });
   addI({ id:'piano', x:19.5, z:18.5, r:1.2, label: () => '按下琴鍵', go: () => { dlg('鋼琴', LORE.piano); [58, 59, 64].forEach((m, i) => setTimeout(() => mbNote(20.4, 18.5, m, 1.6), i * 380)); act('piano'); } });
   addI({ id:'musicbox', x:16.5, z:17.4, r:1.3, label: w => w.it.windkey === myId ? '替音樂盒上發條' : '查看音樂盒', go: w => w.it.windkey === myId ? act('wind') : dlg('音樂盒', LORE.musicbox) });
@@ -535,7 +535,7 @@ function buildWorld() {
   const globe = new THREE.Mesh(new THREE.SphereGeometry(.12, 16, 12), mat(0x3a6a8a)); globe.position.set(24.45, .95, 15.2); scene.add(globe); markFurn(tdesk);
   addI({ id:'sudoku', x:24, z:16.2, r:1.2, label: w => w.fl.sudoku ? '講台抽屜（已打開）' : '講台抽屜上有個數獨鎖', go: w => w.fl.sudoku ? dlg('講台', ['抽屜空了。']) : openPuzzle('sudoku') });
   for (const [x, z] of [[22.8, 17.4], [25.1, 17.4], [22.8, 19.1], [25.1, 19.1]]) schoolDesk(x, z);
-  const dr = ctex(512, 200, g => { g.fillStyle = '#d9cfb6'; g.fillRect(0, 0, 512, 200); for (let i = 0; i < 6; i++) { const x = 10 + i * 84; g.fillStyle = '#f2ecdc'; g.fillRect(x, 20, 74, 160); g.fillStyle = '#111'; g.fillRect(x + 30, 70, 14, 70); g.beginPath(); g.arc(x + 37, 60, 13, 0, 7); g.fill(); g.strokeStyle = '#d33'; g.lineWidth = 3; g.beginPath(); g.arc(x + 37, 62, 7, .2, Math.PI - .2); g.stroke(); g.fillStyle = ['#e33','#3a3','#33e','#ea3','#a3a','#3aa'][i]; g.fillRect(x + 8, 150, 20, 20); } g.fillStyle = '#555'; g.font = '16px sans-serif'; g.fillText('莉莎', 448, 192); });
+  const dr = ctex(512, 200, g => { g.fillStyle = '#d9cfb6'; g.fillRect(0, 0, 512, 200); for (let i = 0; i < 6; i++) { const x = 10 + i * 84; g.fillStyle = '#f2ecdc'; g.fillRect(x, 20, 74, 160); g.fillStyle = '#111'; g.fillRect(x + 30, 70, 14, 70); g.beginPath(); g.arc(x + 37, 60, 13, 0, 7); g.fill(); g.strokeStyle = '#d33'; g.lineWidth = 3; g.beginPath(); g.arc(x + 37, 62, 7, .2, Math.PI - .2); g.stroke(); g.fillStyle = ['#e33','#3a3','#33e','#ea3','#a3a','#3aa'][i]; g.fillRect(x + 8, 150, 20, 20); } g.fillStyle = '#555'; g.font = '16px sans-serif'; g.fillText('莉莉', 448, 192); });
   dr.wrapS = dr.wrapT = THREE.ClampToEdgeWrapping;
   onWall(new THREE.Mesh(new THREE.PlaneGeometry(2.6, 1), new THREE.MeshStandardMaterial({ map: dr })), 24, 1.6, 20.98, 's');
   addI({ id:'drawings', x:24, z:20.3, r:1.2, label: () => '看看牆上的蠟筆畫', go: () => { dlg('教室', LORE.drawings); act('drawing'); } });
@@ -557,8 +557,8 @@ function buildWorld() {
   const toyChest = box(.8, .45, .5, woodMat(0x8a3a2a), 37.1, .225, 13.5); markFurn(toyChest); toyBlocks(36, 14.1);
   onWall(textPlane(['就寢規定', '一號床在最西邊', '熄燈後不准說話'], 1.2, .9, { size:40 }), 31.5, 1.6, 13.02, 'n');
   addI({ id:'dormrule', x:31.5, z:13.7, label: () => '查看牆上的規定', go: () => dlg('宿舍', LORE.dorm) });
-  onWall(textPlane(['小安 ‖‖‖ 7歲', '要一直笑喔'], .6, .3, { bg:'#b8a98f', fg:'#4a3a2a', size:54 }), 34.5, .7, 13.02, 'n');
-  addI({ id:'carve', x:34.5, z:13.7, r:1.1, label: () => '牆角有小小的刻痕', go: () => { dlg('宿舍', ['牆角刻著歪歪扭扭的字：「小安 ‖‖‖ 7歲　要一直笑喔」']); act('carve'); } });
+  onWall(textPlane(['阿和 7歲', '我躲在這裡'], .6, .3, { bg:'#b8a98f', fg:'#4a3a2a', size:54 }), 34.5, .7, 13.02, 'n');
+  addI({ id:'carve', x:34.5, z:13.7, r:1.1, label: () => '牆角有小小的刻痕', go: () => { dlg('宿舍', ['牆角刻著歪歪扭扭的字：「阿和 7歲　我躲在這裡」', '那個颱風夜，只有躲在這裡的阿和被找到了。']); act('carve'); } });
   painting(28.02, 1.8, 16.5, 'w', 9, .6, .8, true);
 
   // ---------------- 庭院 ----------------
@@ -571,8 +571,8 @@ function buildWorld() {
   addI({ id:'well', x:12.5, z:27.6, r:1.3, label: () => me.role === 7 ? '在水井旁祈禱' : '查看水井', go: w => { dlg('水井', LORE.well); if (me.role === 7) act('pray'); } });
   addI({ id:'gate', x:19.9, z:30.4, r:1.6, noisy:true,
     hold: w => (w.fl.chain && w.fl.padlock && !w.fl.seal && w.ph === 3) ? 8 : 0,
-    label: w => { if (w.fl.gate) return null; if (!w.fl.chain) return w.it.cutter === myId ? '用斷線鉗剪斷鐵鍊' : '查看大門的三道鎖'; if (!w.fl.padlock) return w.it.gk === myId ? '用大門鑰匙打開大鎖' : '大鎖還鎖著（需要完整的大門鑰匙）'; return w.ph === 3 ? '撕下微笑封印（按住 E，聲音很大）' : '封印紋風不動……只有深夜才撕得下來'; },
-    go: w => { if (!w.fl.chain) return w.it.cutter === myId ? act('gate', 'cut') : dlg('大門', LORE.gate); if (!w.fl.padlock) return w.it.gk === myId ? act('gate', 'unlock') : dlg('大門', LORE.gate); if (w.ph === 3) act('gate', 'seal'); else dlg('大門', ['封印上的笑臉，好像在嘲笑你。', '現在撕不下來──要等到深夜。']); } });
+    label: w => { if (w.fl.gate) return null; if (!w.fl.chain) return w.it.cutter === myId ? '用斷線鉗剪斷鐵鍊' : '查看大門的三道鎖'; if (!w.fl.padlock) return w.it.gk === myId ? '用大門鑰匙打開大鎖' : '大鎖還鎖著（需要完整的大門鑰匙）'; return w.ph === 3 ? '撕下笑臉封條（按住 E，聲音很大）' : '封條紋風不動……只有深夜才撕得下來'; },
+    go: w => { if (!w.fl.chain) return w.it.cutter === myId ? act('gate', 'cut') : dlg('大門', LORE.gate); if (!w.fl.padlock) return w.it.gk === myId ? act('gate', 'unlock') : dlg('大門', LORE.gate); if (w.ph === 3) act('gate', 'seal'); else dlg('大門', ['封條上的笑臉，好像在嘲笑你。', '現在撕不下來──要等到深夜。']); } });
   const lean = new THREE.Group(); lean.position.set(2, 0, 30.5); scene.add(lean);
   for (const [x, z] of [[-1, -.5], [1, -.5]]) box(.1, 2.2, .1, bedFrame, x, 1.1, z, lean);
   box(2.2, .08, 1.3, mat(0x3a3028), 0, 2.2, 0, lean);
@@ -588,7 +588,7 @@ function buildWorld() {
   // ---------------- 牆上的血字（深夜） ----------------
   onWall(bloodText('一起玩吧', 3, 1.1), 10.5, 1.75, 10.01, 'n');
   onWall(bloodText('祂在看著你', 3.4, 1.1), 27, 1.75, 11.99, 's');
-  onWall(bloodText('不要笑', 2.4, 1.1), 15.5, 2.1, 20.99, 's');
+  onWall(bloodText('還差四個', 2.6, 1.1), 15.5, 2.1, 20.99, 's');
   onWall(bloodText('嘻嘻嘻嘻嘻', 3, 1), 36, 2.1, 20.99, 's');
   onWall(bloodText('找到你了', 2.6, 1), 3.2, 2.5, 13.01, 'n');
   onWall(bloodText('不要回頭', 2.6, 1), 38.99, 1.7, 15.5, 'e');
@@ -1006,7 +1006,7 @@ function startGame() {
   const used = { v:0, c:0 };
   for (const p of pref) { const r = pools[p.f][used[p.f]++ % 4]; w.pl[p.id] = { n:p.n, f:p.f, r, s: p.f === 'c' ? 'c' : 'f', t:0, k:0, e:'', sp: used[p.f] - 1, mg:{ i:0, t:'' } }; }
   hostState = freshHost();
-  annc('早上。陽光從破窗照進斯邁爾孤兒院。天黑之前，盡量把線索找齊。');
+  annc('早上。陽光從破窗照進白楊之家。天黑之前，盡量把線索找齊。');
 }
 function freshHost() { const g0 = W?.g?.mo && W.g.mo !== 'n' ? W.g : null; return { gh:{ x:g0?.x ?? 32.5, z:g0?.z ?? 4.5, y:g0?.y ?? 0, mo:g0 ? 'p' : 'n', path:[], wait:0, tgt:null, lostT:0, last:null, inv:null, invT:0, doorWait:0, repath:0, lastDoor:null, cool:0 }, nz:{}, noises:[], ritT:0, acc:0 }; }
 function annc(t) { W.msg = { i:(W.msg?.i || 0) + 1, t }; }
@@ -1024,8 +1024,8 @@ function lockOk(id, P, L) {
   switch (L) {
     case 'kitchen': W.fl.kitchen = 1; giveTo(id, ['dkey', 'matches']); tell(id, '櫥櫃喀一聲打開了：裡面有「院長室鑰匙」和一盒「火柴」。'); break;
     case 'storage': W.lk.st = 0; W.dr.st = 1; tell(id, '喀嚓──儲藏室的門鎖彈開了。'); break;
-    case 'safe': W.fl.safe = 1; giveTo(id, ['gk2', 'diary']); if (P.r === 5) P.t |= 1; tell(id, '保險箱開了！裡面有半截「大門鑰匙」和「院長日記」。'); break;
-    case 'lab': W.fl.lab = 1; if (P.r === 6) P.t |= 2; tell(id, '紀錄箱打開了。裡面是一疊「笑容檢查表」，每個孩子都被打了滿分。'); break;
+    case 'safe': W.fl.safe = 1; giveTo(id, ['gk2', 'diary']); if (P.r === 5) P.t |= 1; tell(id, '保險箱開了！裡面有半截「大門鑰匙」和「白老師的日記」。'); break;
+    case 'lab': W.fl.lab = 1; if (P.r === 6) P.t |= 2; tell(id, '紀錄箱打開了。裡面是三十年來的錄音帶，每一卷都錄到同一句：「還差四個。」'); break;
     case 'cellbox': W.fl.cellbox = 1; giveTo(id, ['gk1']); tell(id, '字輪對齊，木箱打開了：半截「大門鑰匙」！'); break;
     case 'sudoku': W.fl.sudoku = 1; giveTo(id, ['uv']); tell(id, '講台抽屜彈開：一支「紫外線手電筒」。'); break;
     case 'sokoban': W.fl.sokoban = 1; giveTo(id, ['cutter']); tell(id, '最後一塊鐵塊歸位，箱蓋彈開：「斷線鉗」！'); break;
@@ -1049,7 +1049,7 @@ function hostAction(id, t, a) {
     case 'cont': {
       if (a === 'desk' && near(id, 32.5, 4.3, 2.5) && !W.fl.desk) { W.fl.desk = 1; giveTo(id, ['cuffkey']); tell(id, '書桌抽屜裡有一把「手銬鑰匙」。'); }
       if (a === 'cupboard' && near(id, 10.7, 3.2, 2.5)) { giveTo(id, ['windkey']); tell(id, '玻璃罐後面藏著一把「發條鑰匙」。'); }
-      if (a === 'crate' && near(id, 24.6, 1.6, 2.2)) { giveTo(id, ['doll']); tell(id, '木箱最底下壓著一個「舊玩偶」。'); }
+      if (a === 'crate' && near(id, 24.6, 1.6, 2.2)) { giveTo(id, ['doll']); tell(id, '木箱最底下壓著一個「舊布偶」。'); }
       if (a === 'tag' && near(id, 16.5, 1.8, 2.5)) { giveTo(id, ['tag']); tell(id, '撿起了「褪色的名牌」。'); if (P.r === 4) P.t |= 1; }
       if (a === 'photo' && near(id, 16.6, 13.7, 2.5)) { giveTo(id, ['photo']); tell(id, '取下了一張「院童合照」。'); }
       if (/^bed[0-3]$/.test(a)) { const i = +a[3]; if (!near(id, BED_AT[i], 19.4, 2)) break;
@@ -1075,7 +1075,7 @@ function hostAction(id, t, a) {
     case 'pry': {
       if (!has('crowbar')) break;
       if (a === 'shed' && W.lk.shed && near(id, 35.5, 26.5, 2.6)) { W.lk.shed = 0; W.dr.shed = 1; tell(id, '木板被撬開了！（好大的聲音……）'); noise(35.5, 26.5, 15); }
-      if (a === 'donation' && !W.fl.don && near(id, 10.4, 7.2, 2.5)) { W.fl.don = 1; if (P.r === 5) P.t |= 2; tell(id, '捐款箱裡只有幾枚生鏽的硬幣，和一張紙條：「微笑是最好的捐款。」'); noise(10.4, 7.2, 10); }
+      if (a === 'donation' && !W.fl.don && near(id, 10.4, 7.2, 2.5)) { W.fl.don = 1; if (P.r === 5) P.t |= 2; tell(id, '捐款箱裡只有幾枚生鏽的硬幣，和一張紙條：「謝謝你陪孩子們玩。」'); noise(10.4, 7.2, 10); }
       break;
     }
     case 'uncuff': { const T = W.pl[a]; const tp = peerPos(a); if (T && T.s === 'c' && has('cuffkey') && tp && Math.hypot(tp.x - pos.x, tp.z - pos.z) < 2.2) { T.s = 'f'; tell(a, `${P.n} 替你解開了手銬！`); tell(id, `你替 ${T.n} 解開了手銬。`); } break; }
@@ -1087,24 +1087,24 @@ function hostAction(id, t, a) {
       else { W.fl.cd = 0; tell(id, '火焰「噗」地一聲全部熄滅了。順序不對。'); noise(3, 17, 10); }
       break;
     }
-    case 'altar': if (near(id, 3.3, 17, 2.5)) { let n = 0; for (const r of RELICS) if (W.it[r] === id) { W.it[r] = 'a'; n++; } if (n) tell(id, `你把 ${n} 件遺物放上了祭壇。（${RELICS.filter(r => W.it[r] === 'a').length}／4）`); checkRitual(); } break;
+    case 'altar': if (near(id, 3.3, 17, 2.5)) { let n = 0; for (const r of RELICS) if (W.it[r] === id) { W.it[r] = 'a'; n++; } if (n) tell(id, `你把 ${n} 件孩子們的東西放上了祭壇。（${RELICS.filter(r => W.it[r] === 'a').length}／4）`); checkRitual(); } break;
     case 'bless': if (P.r === 3 && near(id, 3.3, 17.5, 2.5)) { P.t |= 1; tell(id, '你低聲為孩子們禱告。燭火輕輕晃了一下。'); } break;
     case 'snap': { const bit = { wall:1, cell:2, safe:4 }[a]; if (P.r === 0 && bit) { P.k |= bit; tell(id, '喀擦。證據已拍下。'); } break; }
     case 'files': if (P.r === 0 && near(id, 28.6, 2.5, 2.5)) { P.t |= 2; tell(id, '你把名單拍了下來。'); } break;
     case 'read': if (has('diary') && P.r === 2) P.t |= 1; break;
     case 'prints': if (P.r === 2 && has('uv') && near(id, 16.5, 8.1, 2)) { P.t |= 2; tell(id, '指紋已比對：和院長書桌上的一樣。'); } break;
-    case 'carve': if (P.r === 1 && near(id, 34.5, 13.7, 2)) { P.t |= 2; tell(id, '……是你小時候刻的。你一直都記得要笑。'); } break;
+    case 'carve': if (P.r === 1 && near(id, 34.5, 13.7, 2)) { P.t |= 2; tell(id, '……是你小時候刻的。那天晚上，只有你被找到了。'); } break;
     case 'drawing': if (P.r === 4 && near(id, 24, 20.3, 2)) { P.t |= 2; tell(id, '你認出了妹妹的筆跡。'); } break;
     case 'record': if (P.r === 6 && inRect(pos.x, pos.z, CONF)) { P.t |= 1; tell(id, '你對著錄音機說出了你知道的一切。'); } break;
-    case 'wind': if (has('windkey') && near(id, 16.5, 16.3, 2.5)) { W.fl.mb = (W.fl.mb || 0) + 1; if (P.r === 7) P.t |= 2; tell(id, '音樂盒緩緩轉動起來……那是祂常哼的旋律。'); noise(16.5, 16.3, 9); } break;
+    case 'wind': if (has('windkey') && near(id, 16.5, 16.3, 2.5)) { W.fl.mb = (W.fl.mb || 0) + 1; if (P.r === 7) P.t |= 2; tell(id, '音樂盒緩緩轉動起來……那是老周常哼給孩子們聽的歌。'); noise(16.5, 16.3, 9); } break;
     case 'pray': if (P.r === 7 && near(id, 12.5, 26.5, 2.5)) { if (W.ph === 3) { P.t |= 1; tell(id, '你在月光下為孩子們祈禱。'); } else tell(id, '……現在還不是時候。（要在深夜）'); } break;
     case 'piano': noise(20.4, 18.5, 14); break;
     case 'gate': {
       if (!near(id, 19.9, 30.5, 2.6)) break;
-      if (a === 'cut' && has('cutter') && !W.fl.chain) { W.fl.chain = 1; annc(`${P.n} 剪斷了大門的鐵鍊。（還剩大鎖與封印）`); noise(19.9, 30.5, 10); }
-      if (a === 'unlock' && has('gk') && W.fl.chain && !W.fl.padlock) { W.fl.padlock = 1; annc(`${P.n} 打開了大門的大鎖。只剩下封印了──等深夜。`); }
-      if (a === 'seal' && W.fl.chain && W.fl.padlock && !W.fl.seal) { if (W.ph !== 3) { tell(id, '封印撕不下來。要等到深夜。'); break; } W.fl.seal = 1; noise(19.9, 30.5, 18); }
-      if (W.fl.chain && W.fl.padlock && W.fl.seal && !W.fl.gate) { W.fl.gate = 1; annc('封印被撕下了──孤兒院的大門打開了！快逃！'); }
+      if (a === 'cut' && has('cutter') && !W.fl.chain) { W.fl.chain = 1; annc(`${P.n} 剪斷了大門的鐵鍊。（還剩大鎖與封條）`); noise(19.9, 30.5, 10); }
+      if (a === 'unlock' && has('gk') && W.fl.chain && !W.fl.padlock) { W.fl.padlock = 1; annc(`${P.n} 打開了大門的大鎖。只剩下封條了──等深夜。`); }
+      if (a === 'seal' && W.fl.chain && W.fl.padlock && !W.fl.seal) { if (W.ph !== 3) { tell(id, '封條撕不下來。要等到深夜。'); break; } W.fl.seal = 1; noise(19.9, 30.5, 18); }
+      if (W.fl.chain && W.fl.padlock && W.fl.seal && !W.fl.gate) { W.fl.gate = 1; annc('封條被撕下了──白楊之家的大門打開了！快逃！'); }
       break;
     }
   }
@@ -1112,7 +1112,7 @@ function hostAction(id, t, a) {
 function openSecret() { if (!W.fl.sp) { W.fl.sp = 1; annc('月光照進禱告室，祭壇後的石牆緩緩移開──密道打開了。'); } }
 function checkRitual() {
   if (W.fl.rit || W.ph !== 3) return;
-  if (RELICS.every(r => W.it[r] === 'a')) { for (const P of Object.values(W.pl)) if (P.s === 'd' || P.s === 'c') P.s = 'f'; W.fl.rit = 1; hostState.ritT = 14; annc('孩子們的遺物回到了祭壇。遠處傳來一聲很輕的哭聲……鐵鍊聲停了。'); W.fl.gate = 1; }
+  if (RELICS.every(r => W.it[r] === 'a')) { for (const P of Object.values(W.pl)) if (P.s === 'd' || P.s === 'c') P.s = 'f'; W.fl.rit = 1; hostState.ritT = 14; annc('孩子們的東西回到了祭壇。走廊盡頭傳來一聲很輕的：「……找到了。」鐵鍊聲停了。'); W.fl.gate = 1; }
 }
 function hostTick(dt) {
   const H = hostState ??= freshHost();
@@ -1122,7 +1122,7 @@ function hostTick(dt) {
   for (const p of peers) if (p.p.j && !W.pl[p.id] && Object.keys(W.pl).length < MAX_PLAYERS) W.pl[p.id] = { n:(p.p.n || '玩家').slice(0, 10), f:'v', r:[0,1,2,3][Math.floor(Math.random() * 4)], s:'f', t:0, k:0, e:'', sp:Object.keys(W.pl).length, mg:{ i:0, t:'' } };
   W.pt -= dt;
   if (W.pt <= 0) {
-    if (W.ph < 3) { W.ph++; W.pt = DUR[W.du][W.ph]; annc(['', '中午。灰塵在光裡飄著。', '傍晚。影子越拉越長……天黑之前做好準備。', '深夜。走廊的盡頭，響起了鐵鍊拖地的聲音。大門的封印，現在撕得下來了。'][W.ph]); if (W.ph === 3) { if (W.fl.cand) openSecret(); checkRitual(); } }
+    if (W.ph < 3) { W.ph++; W.pt = DUR[W.du][W.ph]; annc(['', '中午。灰塵在光裡飄著。', '傍晚。影子越拉越長……天黑之前做好準備。', '深夜。走廊的盡頭，響起了鐵鍊拖地的聲音──老周又開始找人了。大門的封條，現在撕得下來了。'][W.ph]); if (W.ph === 3) { if (W.fl.cand) openSecret(); checkRitual(); } }
     else return endGame('dawn');
   }
   if (W.fl.rit) { H.ritT -= dt; if (H.ritT <= 0) return endGame('ritual'); }
@@ -1543,7 +1543,7 @@ function myAvatar() { if (!myAv) { myAv = makeAvatar(me.char); myAv.root.rotatio
 
 // 鬼（所有人顯示）
 let gx = 32.5, gz = 4.5, gy = 0, clinkT = 0, heartT = 0, lastWh = -1;
-const PHRASES = ['……你在哪裡呀？', '一起玩捉迷藏吧……', '我看到你了喔……', '不要怕……我只是想笑……'];
+const PHRASES = ['……你在哪裡呀？', '一起玩捉迷藏吧……', '我看到你了喔……', '還差四個……'];
 function updateGhostView(dt) {
   const g = W?.g; const on = W?.st === 'play' && g && g.mo !== 'n';
   ghostAv.root.visible = ghostMask.visible = !!on; ghostEye.intensity = on ? 6 : 0; for (const l of shackle) l.visible = !!on;
@@ -1615,7 +1615,7 @@ function updateHUD() {
   if (P) {
     const R = ROLES[P.r];
     const tk = R.tasks.map((t, i) => `${P.t & (1 << i) ? '✅' : '▫️'} ${t}${i === 0 && P.r === 0 ? `（${[1,2,4].filter(b => P.k & b).length}/3）` : ''}`).join('<br>');
-    const gate = `🚪 大門：${W.fl.chain ? '✅' : '⛓'}鐵鍊 ${W.fl.padlock ? '✅' : '🔒'}大鎖 ${W.fl.seal ? '✅' : '☺'}封印`;
+    const gate = `🚪 大門：${W.fl.chain ? '✅' : '⛓'}鐵鍊 ${W.fl.padlock ? '✅' : '🔒'}大鎖 ${W.fl.seal ? '✅' : '☺'}封條`;
     $('role').innerHTML = `<span style="color:${FAC_COL[P.f]}">${P.f === 'v' ? '拜訪者' : '被囚者'}</span>・<b>${R.n}</b><br>${tk}<br><span style="color:var(--dim)">${gate}</span>`;
     const sc = $('statusChip'); const S = { c: P.cap ? '⛓ 你被祂抓回來、重新銬上了。等隊友帶手銬鑰匙來救你！' : P.pin ? '⛓ 你被銬在長椅上，髮夾已經斷了。等隊友帶手銬鑰匙來！' : '⛓ 你被銬在禱告室的長椅上。找找長椅縫隙，或等人帶手銬鑰匙來。', j:'🔒 你被關進了懲戒室。等隊友從外面拉開門閂！', d:'😱 祂抓住了你，正把你拖回禱告室……', e:'🌅 你已經逃出孤兒院了。可以繼續四處看看，等待其他人。' }[P.s];
     const chased = W.g?.t === myId && P.s === 'f';
@@ -1712,8 +1712,8 @@ function spawnMe() {
   me.spawned = true; me.st = P.s; myMsgI = P.mg?.i || 0;
   banner('早上', P.f === 'c' ? `你是被囚者「${ROLES[P.r].n}」。雙手被銬著……` : `你是拜訪者「${ROLES[P.r].n}」。孤兒院就在眼前。`);
   dlg(ROLES[P.r].n, P.f === 'c'
-    ? ['頭好痛。你醒來時，雙手被銬在禱告室的長椅上。', '旁邊好像還有別人。', `個人任務：${ROLES[P.r].tasks.join('；')}`, '先想辦法掙脫手銬吧──長椅縫隙裡也許有什麼，或者等外面的人帶鑰匙來。']
-    : ['你推開鏽蝕的鐵門走進庭院。身後的門「碰」地關上，被鐵鍊纏住了。', '建築深處傳來微弱的呼救聲。', `個人任務：${ROLES[P.r].tasks.join('；')}`, '大門有三道鎖：鐵鍊、大鎖、和只能在深夜撕下的封印。白天很短──盡量把線索找齊。'], () => tryLock());
+    ? ['頭好痛。你昨晚進來時被什麼東西抓住了，醒來時雙手被銬在禱告室的長椅上。', '牆上歪歪扭扭地寫著：「被抓到的人要來這裡坐牢。」', '旁邊好像還有別人。', `個人任務：${ROLES[P.r].tasks.join('；')}`, '先想辦法掙脫手銬吧──長椅縫隙裡也許有什麼，或者等外面的人帶鑰匙來。']
+    : ['你推開鏽蝕的鐵門走進白楊之家的庭院。身後的門「碰」地關上，被鐵鍊纏住了。', '建築深處傳來微弱的呼救聲。', `個人任務：${ROLES[P.r].tasks.join('；')}`, '大門有三道鎖：鐵鍊、大鎖、和只能在深夜撕下的封條。白天很短──盡量把線索找齊。'], () => tryLock());
 }
 let netInfo = { ok: true, why: '' };
 function netReason(w) {
@@ -1750,9 +1750,9 @@ function showEnding() {
   inLobby = true; document.exitPointerLock?.();
   $('ending').style.display = 'grid';
   const res = W.res || {}; const any = Object.values(W.pl).some(P => P.s === 'e');
-  $('endTitle').textContent = res.rit ? '真結局・微笑安息' : res.why === 'wipe' ? (any ? '其他人都被抓了' : '全員被抓') : any ? '逃出生天' : '微笑永遠都在';
-  $('endText').innerHTML = res.why === 'wipe' && !any ? '<p>最後一個人也被拖回了禱告室。</p><p>長椅上坐滿了人，每個人的手腕都銬著。祂站在門口，笑得很開心：「明天也一起玩吧。」</p>' : res.rit ? '<p>孩子們的遺物回到了祭壇。戴著微笑面具的「祂」停下腳步，面具落在地上──底下那張臉，正在哭。</p><p>天亮時，你們一起走出了斯邁爾孤兒院。</p>'
-    : any ? '<p>有人逃出去了。但回頭看時，二樓的窗邊，有一張笑臉正看著你們離開。</p>' : '<p>天亮了。懲戒室的門閂一直沒有被拉開。</p><p>「歡迎回家。」祂笑著說。</p>';
+  $('endTitle').textContent = res.rit ? '真結局・都找到了' : res.why === 'wipe' ? (any ? '其他人都被抓了' : '全員被抓') : any ? '逃出生天' : '捉迷藏還沒結束';
+  $('endText').innerHTML = res.why === 'wipe' && !any ? '<p>最後一個人也被帶回了禱告室。</p><p>長椅上坐滿了人，每個人的手腕都銬著。老周站在門口，笑臉面具歪了一邊：「明天也一起玩吧。」</p>' : res.rit ? '<p>孩子們的東西回到了祭壇。戴著笑臉面具的老周停下腳步，面具落在地上──他在笑，也在哭。</p><p>「找到了……都找到了。」天亮時，你們一起走出了白楊之家。</p>'
+    : any ? '<p>有人逃出去了。回頭看時，二樓的窗邊，有一張畫著笑臉的紙面具正看著你們。</p><p>「還差……」</p>' : '<p>天亮了。禱告室的長椅上坐滿了人。</p><p>「下一輪，換你們當鬼喔。」</p>';
   // ---- 團隊評等 ----
   const all = Object.values(W.pl), esc_ = all.filter(P => P.s === 'e').length, tasksAll = all.every(P => (P.t & 3) === 3);
   const taskDone = all.reduce((n, P) => n + (P.t & 1 ? 1 : 0) + (P.t & 2 ? 1 : 0), 0), taskTotal = all.length * 2;

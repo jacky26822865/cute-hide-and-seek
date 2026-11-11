@@ -185,11 +185,11 @@ body.touch #role.open{max-height:none}
 
 <!-- 入口 -->
 <div id="lobby" class="overlay"><div class="card">
-  <h1>可愛捉迷藏<small>CUTE HIDE &amp; SEEK · 斯邁爾孤兒院</small></h1>
+  <h1>可愛捉迷藏<small>CUTE HIDE &amp; SEEK · 白楊之家</small></h1>
   <div class="story">
-    <p>2006 年，東歐接連發生孩童失蹤案。報紙替那個始終掛著笑容的兇手取了名字──「微笑天使」。線索指向斯邁爾孤兒院的院長，但警方還沒上門，院長就在禱告室結束了自己的生命，孤兒院從此荒廢。</p>
-    <p>多年後，兩群人走進了這片廢墟。<b style="color:var(--vis)">拜訪者</b>各懷目的，從庭院大門進來，聽見建築深處傳來呼救；<b style="color:var(--cap)">被囚者</b>比他們更早到，醒來時已被銬在禱告室的長椅上。</p>
-    <p>從早上到深夜，你們有四段時間。入夜之後，走廊會響起鐵鍊拖地的聲音──戴著微笑面具的「祂」，從來沒有離開過。</p>
+    <p>1994 年夏天，颱風夜停電。山城外的育幼院「白楊之家」裡，白老師讓孩子們玩大家最愛的「可愛捉迷藏」：當鬼的人要戴上孩子們畫的笑臉面具，被抓到的人要去禱告室「坐牢」，點著蠟燭的角落是「基地」，鬼不能進去。</p>
+    <p>那天當鬼的是雜工老周。天亮時，有四個孩子怎麼找都找不到。鎮上的人認定是老周把孩子藏了起來，把他鎖在院裡，用鐵鍊纏住大門。從此，白楊之家再也沒有人住過。</p>
+    <p>三十年後，<b style="color:var(--vis)">拜訪者</b>各懷目的推開了生鏽的大門；<b style="color:var(--cap)">被囚者</b>比他們早到一晚，醒來時已被銬在禱告室的長椅上。從早上到深夜，你們有四段時間。入夜後，走廊會響起鐵鍊拖地的聲音──老周還在找。「還差四個。」</p>
   </div>
   <div class="grid2">
     <label class="f">你的名字<input type="text" id="nameIn" maxlength="10" placeholder="例如：小靈"></label>
@@ -206,7 +206,7 @@ body.touch #role.open{max-height:none}
     <button class="btn ghost" id="soloBtn" disabled>單人遊玩</button>
     <span class="note" id="netNote"></span>
   </div>
-  <div class="credit">粉絲改編練習作品，非官方、非商業。3D 素材：<a href="https://github.com/dandacompany/deskrpg">DeskRPG</a> © Dante Labs，依 Sustainable Use License 非商業使用（全文見 assets/LICENSE.txt），已修改其配置與用途；角色模型改作自 Quaternius（CC0）。</div>
+  <div class="credit">原創故事練習作品，非商業。3D 素材：<a href="https://github.com/dandacompany/deskrpg">DeskRPG</a> © Dante Labs，依 Sustainable Use License 非商業使用（全文見 assets/LICENSE.txt），已修改其配置與用途；角色模型改作自 Quaternius（CC0）。</div>
 </div></div>
 
 <!-- 等待室 -->
@@ -278,9 +278,9 @@ body.touch #role.open{max-height:none}
   </div>
   <div class="story" style="font-size:13.5px">
     <p>⏳ 時間分為 <b>早上 → 中午 → 傍晚 → 深夜</b>。深夜時「祂」會出來巡視、開關房門；祂有視野範圍，背對你時看不到。</p>
-    <p>⛓ 祂戴著腳鐐，<b>聽到鐵鍊聲就快躲進點著蠟燭的安全角落</b>（地圖上的金色格）。祂不會進入安全區，即使正在追你，也會當作沒看到而離開──但會一直巡視到天亮。</p>
+    <p>⛓ 老周（祂）腳上拖著鐵鍊，<b>聽到鐵鍊聲就快躲回點著蠟燭的「基地」</b>（地圖上的金色格）。照遊戲規則，鬼不能進基地；就算正在追你，祂也會當作沒看到而離開──但會一直找到天亮。</p>
     <p>👁 被祂看見不會馬上被抓──祂會追過來，<b>被碰到才算抓住</b>。祂會把你拖回禱告室、重新銬在長椅上，要等隊友帶「手銬鑰匙」來救（髮夾只能用一次）。天亮時還被銬著就輸了。</p>
-    <p>🚪 <b>主線（大家一起）</b>：大門有三道鎖──鐵鍊（斷線鉗）、大鎖（兩段大門鑰匙）、以及<b>只有深夜才撕得下的封印</b>。線索散落在各個房間，常常要跨房間對照：配餐表、黑板、帳本、紫外光下的字、藏頭詩、數獨、推箱子……</p>
+    <p>🚪 <b>主線（大家一起）</b>：大門有三道鎖──鐵鍊（斷線鉗）、大鎖（兩段大門鑰匙）、以及<b>只有深夜才撕得下的封條</b>。線索散落在各個房間，常常要跨房間對照：配餐表、黑板、帳本、紫外光下的字、藏頭詩、數獨、推箱子……</p>
     <p>🧰 道具可以交給隊友（Q 丟下、對方撿起）。紫外線手電筒拿在身上時，才看得見隱藏的字。</p>
     <p>☠ <b>深夜時，還在院內的人全部被抓（或都被銬著）就全員出局。</b></p>
     <p>👤 每個角色另有兩個較簡單的個人任務，結算時會顯示。</p>
