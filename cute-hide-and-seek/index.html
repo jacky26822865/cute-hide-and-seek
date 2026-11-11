@@ -92,6 +92,10 @@ button{font-family:inherit;cursor:pointer}
 .skpad button{height:40px;border-radius:8px;border:1px solid #3b3542;background:#1f1b24;color:#fff}
 .netbar{border-radius:10px;padding:10px 12px;font-size:13px;line-height:1.7;margin:8px 0;background:#1d1a22;border:1px solid #3d3644}
 .netbar.ok{border-color:#2f6b3f;background:#13251a}.netbar.bad{border-color:#8a3a30;background:#2a1412;color:#ffd6cf}
+.grade{display:flex;gap:16px;align-items:center;border:2px solid;border-radius:14px;padding:12px 16px;margin:10px 0 14px;background:#0f0d12}
+.grade .gs{font-size:34px;font-weight:900;letter-spacing:.05em;white-space:nowrap}
+.grade .gn{font-size:22px;font-weight:900}
+.grade .gd{font-size:13px;color:#d8cfbf;line-height:1.6}
 table.res{width:100%;border-collapse:collapse;font-size:13.5px;margin:12px 0}
 table.res td,table.res th{border-bottom:1px solid #ffffff18;padding:7px 6px;text-align:left}
 #paused{position:fixed;inset:0;z-index:12;display:none;place-items:center;background:rgba(0,0,0,.4);font-size:17px;cursor:pointer}
@@ -215,7 +219,7 @@ body.touch #role.open{max-height:none}
     <label class="f">遊戲時長（早／午／晚／深夜）<select id="durSel"><option value="0">短：1.5／1.5／1.5／8 分</option><option value="1" selected>標準：2.5／2.5／2.5／12 分</option><option value="2">長：3.5／3.5／3.5／15 分</option></select></label>
     <label class="f">語音範圍<select id="vmSel"><option value="room">只有告解室（語音小房間）</option><option value="near">全地圖、靠近才聽得到</option></select></label>
   </div>
-  <div class="row"><button class="btn" id="startBtn">開始遊戲</button><span class="note">建議 2～8 人；人數少也能玩。</span></div>
+  <div class="row"><button class="btn" id="startBtn">開始遊戲</button><span class="note">最多 8 人；人數少也能玩。</span></div>
 </div></div>
 
 <!-- 密碼鎖 -->
