@@ -766,7 +766,7 @@ const PEER_ICE = [
 if (new URLSearchParams(location.search).has('noturn')) PEER_ICE.splice(1); // 測試用：只保留 STUN
 function netProgress(t) { const e = document.getElementById('netNote'); if (e) e.textContent = t; const r = document.getElementById('netStatus'); if (r && !netInfo?.done) r.innerHTML = `<div class="netbar">⏳ ${t}</div>`; }
 class PeerNet {
-  constructor() { this.id = null; this.mine = {}; this.others = new Map(); this.onSignal = null; this.hub = null; this.conn = false; this.err = null; }
+  constructor() { this.id = null; this.mine = {}; this.others = new Map(); this.onSignal = null; this.hub = null; this.seen = new Map(); this.conn = false; this.err = null; }
   mkPeer(id) { return new Promise((res, rej) => { const p = id ? new Peer(id, { ...PEER_OPTS(), config: { iceServers: PEER_ICE } }) : new Peer({ ...PEER_OPTS(), config: { iceServers: PEER_ICE } }); const t = setTimeout(() => rej(Object.assign(new Error('peer timeout'), { type: 'timeout' })), 12000); p.on('open', () => { clearTimeout(t); res(p); }); p.on('error', e => { clearTimeout(t); rej(e); }); }); }
   async start(code) {
     if (!window.Peer) throw Object.assign(new Error('nopeerjs'), { why: 'nopeerjs' });
@@ -775,36 +775,96 @@ class PeerNet {
     netProgress('正在連線配對服務…');
     try { this.me = await this.mkPeer(this.hubId + '-' + rid); } catch (e) { throw Object.assign(new Error('peer'), { why: 'peer:' + (e.type || e.message) }); }
     this.id = rid;
-    this.me.on('disconnected', () => { try { this.me.reconnect(); } catch {} });
+    // 注意：destroy() 也會觸發 disconnected，先等一下確認不是被銷毀才重連，否則會把 ID 又註冊回去
+    this.me.on('disconnected', () => setTimeout(() => { if (!this.left && !this.me.destroyed) try { this.me.reconnect(); } catch {} }, 1000));
+    this.me.on('error', () => {}); // peer-unavailable 等錯誤交給各自的逾時處理
     await this.link();
-    // 心跳：中繼 7 秒沒回應就視為離線，改由其他人接手
+    // 心跳：中繼 6 秒沒回應就視為離線，改由其他人接手
     setInterval(() => {
       if (this.c?.open) { try { this.c.send({ t:'hb' }); } catch {} }
-      if (this.c && Date.now() - (this.lastHub || 0) > 6000) { const c = this.c; this.c = null; this.conn = false; try { c.close(); } catch {} setTimeout(() => this.relink(), 300 + Math.random() * 1500); }
+      if (this.c && Date.now() - (this.lastHub || 0) > 6000) { const c = this.c; this.c = null; this.conn = false; try { c.close(); } catch {} setTimeout(() => this.relink(), 200 + Math.random() * 600); }
     }, 2000);
+    // 備用中繼：持續嘗試搶回正式房號 ID；若發現有更優先的中繼還活著，就併過去
+    setInterval(() => this.hubUpkeep(), 4000);
   }
-  // 嘗試成為中繼；已有人當中繼就連過去
+  altId(rid) { return this.hubId + '-h' + rid; }
+  // 連到指定中繼；成功回傳 true
+  tryConn(target, ms) {
+    return new Promise((res) => {
+      const c = this.me.connect(target, { reliable: true, serialization: 'json' }); let done = false, ok = false;
+      const fin = v => { if (done) return; done = true; if (!v) try { c.close(); } catch {} res(v); };
+      // 連線打開後送 hello，要收到中繼回傳的房間資料（w）才算真正連上，避免連到沒有反應的舊中繼
+      c.on('open', () => { if (done || this.conn) { fin(false); return; } try { c.send({ t:'hello', id:this.id, pres:this.mine }); } catch { fin(false); } });
+      c.on('data', m => {
+        if (!ok) {
+          if (done || this.conn) return;
+          if (m.t === 'full') { this.onMsg(m); fin(false); return; }
+          if (m.t !== 'w') return;
+          ok = true; this.c = c; this.conn = true; this.lastHub = Date.now(); this.onMsg(m); fin(true); return;
+        }
+        if (this.c === c) { this.lastHub = Date.now(); this.onMsg(m); }
+      });
+      c.on('close', () => { if (ok && this.c === c) { this.c = null; this.conn = false; console.warn('[p2p] hub link closed'); setTimeout(() => this.relink(), 200 + Math.random() * 600); } else fin(false); });
+      c.on('error', e => { console.warn('[p2p] link error', e?.type || e); fin(false); });
+      setTimeout(() => fin(false), ms);
+    });
+  }
+  // 只確認某個中繼是否還活著（不加入）
+  probe(target, ms) {
+    return new Promise((res) => {
+      const c = this.me.connect(target, { reliable: true, serialization: 'json' }); let done = false;
+      const fin = ok => { if (done) return; done = true; try { c.close(); } catch {} res(ok); };
+      c.on('open', () => { try { c.send({ t:'hb' }); } catch { fin(false); } }); c.on('data', m => { if (m.t === 'hb') fin(true); });
+      c.on('error', () => fin(false)); setTimeout(() => fin(false), ms);
+    });
+  }
+  // 初次加入：嘗試成為中繼；已有人當中繼就連過去
   async link() {
     this.conn = false; this.others.clear();
     for (let tries = 0; tries < 10 && !this.conn; tries++) {
       netProgress(tries === 0 ? '正在尋找房間…' : `正在連到房間中繼玩家（第 ${tries + 1}／10 次）…${tries >= 2 ? ' 如果一直卡住，可能是網路擋住了直連（手機行動網路、公司或學校網路常見），可以換成 Wi-Fi 試試。' : ''}`);
       if (!this.hub) { try { this.hub = new Hub(await this.mkPeer(this.hubId)); } catch (e) { if (e.type !== 'unavailable-id') console.warn('[p2p] hub', e.type || e); this.hub = null; } }
-      await new Promise((res) => {
-        const c = this.me.connect(this.hubId, { reliable: true, serialization: 'json' }); let done = false;
-        const fin = ok => { if (done) return; done = true; if (!ok) try { c.close(); } catch {} res(); };
-        c.on('open', () => { if (done) { try { c.close(); } catch {} return; } this.c = c; this.conn = true; this.lastHub = Date.now(); c.send({ t:'hello', id:this.id, pres:this.mine }); fin(true); });
-        c.on('data', m => { if (this.c === c) { this.lastHub = Date.now(); this.onMsg(m); } });
-        c.on('close', () => { if (this.c === c) { this.c = null; this.conn = false; console.warn('[p2p] hub link closed'); setTimeout(() => this.relink(), 300 + Math.random() * 1500); } });
-        c.on('error', e => { console.warn('[p2p] link error', e?.type || e); fin(false); });
-        setTimeout(() => fin(false), 10000);
-      });
-      if (!this.conn) await new Promise(r => setTimeout(r, 800));
+      if (await this.tryConn(this.hubId, 10000)) break;
+      await new Promise(r => setTimeout(r, 800));
     }
     if (!this.conn) throw Object.assign(new Error('nohub'), { why: 'nohub' });
     netProgress('已連上房間');
   }
-  async relink() { if (this.conn || this.relinking) return; this.relinking = true; try { await this.link(); } catch (e) { this.err = '中繼重連失敗'; } this.relinking = false; }
+  // 中繼斷了：先試正式房號，再依固定順序（id 由小到大）找備用中繼，輪到自己就自己當
+  async relink() {
+    if (this.conn || this.relinking) return; this.relinking = true;
+    for (const id of this.others.keys()) this.seen.set(id, Date.now());
+    const cands = this.recent();
+    try {
+      for (let round = 0; round < 40 && !this.conn; round++) {
+        if (!this.hub) { try { this.hub = new Hub(await this.mkPeer(this.hubId)); } catch { this.hub = null; } }
+        if (await this.tryConn(this.hubId, this.hub ? 6000 : 2500)) break;
+        for (const c of cands) {
+          if (this.conn) break;
+          if (c === this.id && !this.hub) { try { this.hub = new Hub(await this.mkPeer(this.altId(c)), true); } catch { this.hub = null; } }
+          if (c === this.id && !this.hub) continue;
+          const tgt = (c === this.id && !this.hub.alt) ? this.hubId : this.altId(c);
+          if (await this.tryConn(tgt, c === this.id ? 6000 : (round === 0 ? 4000 : 3000))) break;
+        }
+        if (!this.conn) await new Promise(r => setTimeout(r, 500 + Math.random() * 800));
+      }
+      if (!this.conn) this.err = '中繼重連失敗';
+    } finally { this.relinking = false; }
+  }
+  async hubUpkeep() {
+    const h = this.hub; if (window.HS_DEBUG) console.warn('[p2p] upkeep', !!h, h?.alt, !!h?.base, this.upkeeping); if (!h || !h.alt || h.base || this.upkeeping) return; this.upkeeping = true;
+    try {
+      // 1) 正式房號 ID 已釋放 → 搶回來，之後新加入的人也能進來
+      try { const p = await this.mkPeer(this.hubId); if (this.hub === h) { h.listen(p); h.base = p; return; } else p.destroy(); } catch {}
+      // 2) 有更優先的中繼（正式房號，或排序更前面的備用中繼）還活著 → 解散自己，大家改連過去
+      const mine = h.peer.id, better = [this.hubId, ...this.recent().map(r => this.altId(r)).filter(t => t < mine)];
+      if (window.HS_DEBUG) console.warn('[p2p] upkeep probe', mine, better);
+      for (const t of better) if (await this.probe(t, 3000)) { if (this.hub === h) { console.warn('[p2p] merge into', t); this.hub = null; h.destroy(); } break; }
+    } finally { this.upkeeping = false; }
+  }
+  recent() { const now = Date.now(); return [...new Set([this.id, ...[...this.seen].filter(([, t]) => now - t < 30000).map(([i]) => i)])].sort(); }
   onMsg(m) {
+    const now = Date.now(); if (m.t === 'w') for (const [id] of m.peers) this.seen.set(id, now); else if (m.t === 'p' && m.id) this.seen.set(m.id, now);
     if (m.t === 'w') { this.others.clear(); for (const [id, p] of m.peers) if (id !== this.id) this.others.set(id, p); }
     else if (m.t === 'p' && m.id !== this.id) { const o = this.others.get(m.id) || {}; for (const k in m.d) m.d[k] === null ? delete o[k] : o[k] = m.d[k]; this.others.set(m.id, o); }
     else if (m.t === 'l') this.others.delete(m.id);
@@ -814,11 +874,16 @@ class PeerNet {
   set(p) { for (const k in p) p[k] === null ? delete this.mine[k] : this.mine[k] = p[k]; if (this.c?.open) this.c.send({ t:'p', d:p }); }
   peers() { return [{ id: this.id, me: true, p: this.mine }, ...[...this.others].map(([id, p]) => ({ id, me: false, p }))]; }
   signal(to, d) { if (this.c?.open) this.c.send({ t:'s', to, d }); }
-  leave() { try { this.c?.open && this.c.send({ t:'bye' }); } catch {} try { this.hub?.peer.destroy(); } catch {} try { this.me?.destroy(); } catch {} }
+  leave() { this.left = true; try { this.c?.open && this.c.send({ t:'bye' }); } catch {} try { this.hub?.destroy(); } catch {} try { this.me?.destroy(); } catch {} }
 }
 class Hub { // 由某位玩家的瀏覽器執行，只負責轉送
-  constructor(peer) {
-    this.peer = peer; this.cl = new Map();
+  constructor(peer, alt = false) {
+    this.peer = peer; this.alt = alt; this.base = null; this.peers = []; this.cl = new Map();
+    this.listen(peer);
+    this.iv = setInterval(() => { for (const [i, v] of this.cl) if (Date.now() - v.seen > 6000) { this.cl.delete(i); try { v.c.close(); } catch {} this.bc({ t:'l', id: i }); } }, 2000);
+  }
+  listen(peer) {
+    this.peers.push(peer);
     peer.on('connection', c => {
       let id = null;
       c.on('data', m => {
@@ -826,16 +891,17 @@ class Hub { // 由某位玩家的瀏覽器執行，只負責轉送
         if (m.t === 'hb') { try { c.send({ t:'hb' }); } catch {} return; }
         if (m.t === 'bye' && id) { if (this.cl.get(id)?.c === c) { this.cl.delete(id); this.bc({ t:'l', id }); } try { c.close(); } catch {} return; }
         if (m.t === 'hello' && this.cl.size >= MAX_PLAYERS && !this.cl.has(m.id)) { try { c.send({ t:'full' }); } catch {} setTimeout(() => { try { c.close(); } catch {} }, 300); return; }
-        if (m.t === 'hello') { id = m.id; this.cl.set(id, { c, pres: m.pres || {}, seen: Date.now() }); c.send({ t:'w', peers: [...this.cl].map(([i, v]) => [i, v.pres]) }); this.bc({ t:'p', id, d: m.pres || {} }, id); }
+        if (m.t === 'hello') { id = m.id; const old = this.cl.get(id); if (old && old.c !== c) try { old.c.close(); } catch {} this.cl.set(id, { c, pres: m.pres || {}, seen: Date.now() }); c.send({ t:'w', peers: [...this.cl].map(([i, v]) => [i, v.pres]) }); this.bc({ t:'p', id, d: m.pres || {} }, id); }
         else if (m.t === 'p' && id) { const v = this.cl.get(id); if (!v) return; for (const k in m.d) m.d[k] === null ? delete v.pres[k] : v.pres[k] = m.d[k]; this.bc({ t:'p', id, d: m.d }, id); }
         else if (m.t === 's' && id) { const v = this.cl.get(m.to); if (v?.c.open) v.c.send({ t:'s', from: id, d: m.d }); }
       });
       c.on('close', () => { if (id && this.cl.get(id)?.c === c) { this.cl.delete(id); this.bc({ t:'l', id }); } });
     });
-    peer.on('disconnected', () => { try { peer.reconnect(); } catch {} });
-    setInterval(() => { for (const [i, v] of this.cl) if (Date.now() - v.seen > 6000) { this.cl.delete(i); try { v.c.close(); } catch {} this.bc({ t:'l', id: i }); } }, 2000);
+    peer.on('disconnected', () => setTimeout(() => { if (!this.dead && !peer.destroyed) try { peer.reconnect(); } catch {} }, 1000));
+    peer.on('error', () => {});
   }
   bc(m, except) { for (const [i, v] of this.cl) if (i !== except && v.c.open) try { v.c.send(m); } catch {} }
+  destroy() { this.dead = true; clearInterval(this.iv); for (const [, v] of this.cl) try { v.c.close(); } catch {} this.cl.clear(); for (const p of this.peers) try { p.destroy(); } catch {} }
 }
 
 // ===================== 語音（自架版：WebRTC + 距離衰減） =====================
@@ -1381,6 +1447,7 @@ addEventListener('keydown', e => {
   if (k === 'v' && voice) { voice.muted = !voice.muted; toast(voice.muted ? '麥克風已靜音' : '麥克風已開啟'); }
   if (k === 'm') $('bigmap').style.display = 'grid';
   if (k === 't') toggleTeam();
+  if (k === 'j') toggleQuest();
   if (/^[1-9]$/.test(k)) inspect(+k - 1);
 });
 addEventListener('keyup', e => { const k = e.key.toLowerCase(); keys[k] = false; if (k === 'm') $('bigmap').style.display = 'none'; if (k === 'e') holdT = 0; });
@@ -1696,7 +1763,53 @@ let teamClosed = false, teamT = 0;
 try { teamClosed = localStorage.getItem('hs-team-closed') === '1'; } catch {}
 function toggleTeam() { teamClosed = !teamClosed; try { localStorage.setItem('hs-team-closed', teamClosed ? '1' : '0'); } catch {} renderTeam(true); }
 $('teamHead').addEventListener('click', toggleTeam);
+$('questHead').addEventListener('click', toggleQuest);
 const ST_TXT = { f:['行動中','#9fe08a'], c:['被銬住','#ffb38a'], d:['被拖走中','#ff6b6b'], j:['被關住','#ff6b6b'], e:['已逃脫','#7cc4ff'], x:['出局','#888'] };
+// ===================== 主線進度（全隊共用：直接由同步的世界狀態算出） =====================
+const got = it => { const v = W.it[it]; return v !== undefined && v !== 'w' && v !== 'u' && v !== 'x'; }; // w＝還在原處、x＝尚未出現、u＝已用掉
+const QUEST = [
+  { n:'打開廚房櫥櫃的密碼鎖', h:'餐廳的配餐表藏著數字規律', d: () => !!W.fl.kitchen },
+  { n:'用鑰匙打開院長室', h:'院長室在走廊東側', d: () => !W.lk.dir },
+  { n:'搜查院長室的書桌', h:'書桌抽屜', d: () => !!W.fl.desk },
+  { n:'解開教室講台的數獨鎖', h:'教室講台', d: () => !!W.fl.sudoku },
+  { n:'打開儲藏室的門', h:'教室黑板上的數列', d: () => !W.lk.st },
+  { n:'打開院長室的保險箱', h:'用紫外光看儲藏室的牆＋帳本', d: () => !!W.fl.safe },
+  { n:'打開懲戒室木箱的字輪鎖', h:'宿舍床牌＋懲戒室的粉筆字', d: () => !!W.fl.cellbox },
+  { n:'拼成完整的大門鑰匙', h:'兩段鑰匙要在同一個人身上', d: () => got('gk') },
+  { n:'找到撬棍', h:'禱告室的詩', d: () => got('crowbar') },
+  { n:'撬開工具間', h:'庭院東南角', d: () => !W.lk.shed },
+  { n:'拿到工具箱裡的斷線鉗', h:'工具間的滑塊工具箱', d: () => !!W.fl.sokoban },
+  { n:'剪斷大門的鐵鍊', h:'正門', d: () => !!W.fl.chain },
+  { n:'打開大門的大鎖', h:'正門', d: () => !!W.fl.padlock },
+  { n:'深夜撕下封條，逃出大門', h:'只有深夜撕得下來，很吵', d: () => !!W.fl.seal },
+];
+let questClosed = (() => { try { return localStorage.getItem('hs-quest-closed') === '1'; } catch { return false; } })();
+let questPrev = null;
+function toggleQuest() { questClosed = !questClosed; try { localStorage.setItem('hs-quest-closed', questClosed ? '1' : '0'); } catch {} renderQuest(true); }
+function renderQuest(force) {
+  const box = $('quest'); if (!box) return;
+  if (!W || W.st !== 'play') { box.style.display = 'none'; questPrev = null; return; }
+  box.style.display = 'block'; box.classList.toggle('closed', questClosed);
+  const done = QUEST.map(q => { try { return q.d(); } catch { return false; } });
+  const n = done.filter(Boolean).length;
+  // 有人推進主線 → 全隊都收到提示
+  if (questPrev) { let k = questPrev.filter(Boolean).length; done.forEach((v, i) => { if (v && !questPrev[i]) { k++; toast(`🗝 主線推進（${k}/${QUEST.length}）：${QUEST[i].n}`, 3200); chatLine(`<span style="color:#ffd27a">🗝 主線 ${k}/${QUEST.length}：${esc(QUEST[i].n)}</span>`); } }); }
+  const sig = done.join() + questClosed + (W.fl.sp ? 1 : 0) + RELICS.filter(r => W.it[r] === 'a').length + W.ph;
+  questPrev = done;
+  if (!force && sig === renderQuest.sig) return; renderQuest.sig = sig;
+  const pct = Math.round(n / QUEST.length * 100);
+  const next = QUEST.map((q, i) => [q, i]).filter(([, i]) => !done[i]).slice(0, 2);
+  $('questHead').innerHTML = `<span>🗝 主線 ${n}/${QUEST.length}<span class="qbar"><i style="width:${pct}%"></i></span></span><span class="arr">${questClosed ? '展開 ▾' : '收合 ▴'}</span>`;
+  const rows = QUEST.map((q, i) => {
+    const isNext = next.some(([, j]) => j === i);
+    return `<div class="qs ${done[i] ? 'ok' : isNext ? 'nx' : ''}">${done[i] ? '✅' : isNext ? '▶' : '▫️'} ${esc(q.n)}${isNext ? `<div class="qh">💡 ${esc(q.h)}${i === QUEST.length - 1 && W.ph !== 3 ? '（現在還不是深夜）' : ''}</div>` : ''}</div>`;
+  });
+  const relics = RELICS.filter(r => W.it[r] === 'a').length;
+  rows.push(`<div class="qs side">${W.fl.sp ? '✅' : '▫️'} 支線：禱告室密道${W.fl.sp ? '' : '（四支蠟燭、深夜）'}</div>`);
+  rows.push(`<div class="qs side">${relics >= 4 ? '✅' : '▫️'} 真結局：孩子們的東西放上祭壇 ${relics}/4</div>`);
+  $('questBody').innerHTML = rows.join('');
+}
+
 function renderTeam(force) {
   const box = $('team');
   if (!W || W.st !== 'play' || !net || net instanceof LocalNet) { box.style.display = 'none'; return; }
@@ -1853,7 +1966,7 @@ function loop() {
     $('prompt').style.display = current ? 'block' : 'none';
     if (current) $('prompt').textContent = (document.body.classList.contains('touch') ? '👆 ' : '[E] ') + current.text;
     if (current?.hold && (keys.e || keys._act)) { holdT += dt; if (current.noisy && Math.random() < dt * 2.5) { nzI++; pres({ nz:nzI }); } $('hold').style.display = 'block'; $('hold').firstChild.style.width = Math.min(100, holdT / current.hold * 100) + '%'; if (holdT >= current.hold) { holdT = 0; current.go(W); } } else { $('hold').style.display = 'none'; if (!keys.e) holdT = 0; }
-    updateHUD(); updateVoice(); updateWorldView(dt); renderTeam();
+    updateHUD(); updateVoice(); updateWorldView(dt); renderQuest(); renderTeam();
   } else if (lastPhase !== -2) { lastPhase = -2; applyPhase(); }
   if (W.st === 'end' && $('ending').style.display === 'none') showEnding();
   // 自己的 presence

@@ -39,7 +39,15 @@ canvas#view{display:block}
 #chatIn{position:fixed;left:14px;bottom:14px;width:min(340px,40vw);z-index:9;display:none;font:inherit;font-size:14px;padding:8px 10px;border-radius:8px;border:1px solid var(--line);background:#111;color:#fff}
 #voiceChip{right:14px;bottom:14px}
 /* ---- 隊友狀態面板 ---- */
-#team{position:fixed;right:14px;top:182px;z-index:6;width:236px;font-size:12px;pointer-events:auto;user-select:none}
+#side{position:fixed;right:14px;top:182px;z-index:6;width:236px;font-size:12px;pointer-events:auto;user-select:none;display:flex;flex-direction:column;gap:6px;max-height:calc(100vh - 200px)}
+#team{min-height:0;display:flex;flex-direction:column}
+#quest .th{display:flex;align-items:center;justify-content:space-between;gap:6px;background:var(--panel);border:1px solid rgba(255,210,122,.45);border-radius:10px;padding:6px 10px;cursor:pointer;font-weight:700;color:#ffd27a}
+#quest .th .arr{color:var(--dim);font-size:11px;font-weight:400}
+#quest .qbar{display:inline-block;vertical-align:middle;width:60px;height:6px;margin-left:8px;border-radius:3px;background:rgba(255,255,255,.12);overflow:hidden}#quest .qbar i{display:block;height:100%;background:linear-gradient(90deg,#c9a14a,#ffd27a)}
+#quest .qb{margin-top:4px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:6px 8px;max-height:34vh;overflow:auto;display:flex;flex-direction:column;gap:2px}
+#quest.closed .qb{display:none}
+#quest .qs{color:var(--dim);line-height:1.45}#quest .qs.ok{color:#9fd8a6;opacity:.8}#quest .qs.nx{color:#fff;font-weight:700}#quest .qs.side{font-size:11px;border-top:1px dashed var(--line);padding-top:2px}
+#quest .qh{font-weight:400;color:#ffd27a;font-size:11px;padding-left:18px}
 #team .th{display:flex;align-items:center;justify-content:space-between;gap:6px;background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:6px 10px;cursor:pointer;font-weight:700}
 #team .th .warn{color:#ffb3ab;font-weight:700}
 #team .th .arr{color:var(--dim);font-size:11px}
@@ -52,7 +60,7 @@ canvas#view{display:block}
 .tm .sub{grid-column:2 / 4;font-size:10.5px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .tm.off{opacity:.55}
 .dot.on{background:#3fd36b;box-shadow:0 0 6px #3fd36b}.dot.weak{background:#f0c040}.dot.off{background:#e05a4f}
-@media (max-width:900px), (max-height:500px){ #team{top:calc(max(8px,env(safe-area-inset-top)) + 112px);right:max(8px,env(safe-area-inset-right));width:190px;font-size:11px} #team .tb{max-height:38vh} }
+@media (max-width:900px), (max-height:500px){ #side{top:calc(max(8px,env(safe-area-inset-top)) + 112px);right:max(8px,env(safe-area-inset-right));width:190px;font-size:11px;max-height:calc(100vh - 130px)} #team .tb{max-height:30vh} #quest .qb{max-height:24vh} #quest .qs:not(.nx){display:none} #quest .qs.nx ~ .qs.nx{display:none} }
 .overlay{position:fixed;inset:0;z-index:20;display:grid;place-items:center;background:radial-gradient(ellipse at 50% 30%,rgba(40,20,14,.82),rgba(0,0,0,.96));overflow:auto;padding:20px}
 .card{width:min(720px,94vw);background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:26px 28px;box-shadow:0 20px 80px #000}
 h1{margin:0;font-family:"Noto Serif TC",serif;font-size:46px;font-weight:900;letter-spacing:.18em;color:var(--accent)}
@@ -174,7 +182,7 @@ body.touch #role.open{max-height:none}
   <div class="chip" id="statusChip" style="display:none"></div>
 </div>
 <canvas id="mini" class="hud" width="200" height="160"></canvas>
-<div id="team" style="display:none"><div class="th" id="teamHead"></div><div class="tb" id="teamBody"></div></div>
+<div id="side"><div id="quest" style="display:none"><div class="th" id="questHead"></div><div class="qb" id="questBody"></div></div><div id="team" style="display:none"><div class="th" id="teamHead"></div><div class="tb" id="teamBody"></div></div></div>
 <div id="crosshair" class="hud"></div>
 <div id="prompt" class="hud"></div>
 <div id="hold" class="hud"><i></i></div>
@@ -290,7 +298,7 @@ body.touch #role.open{max-height:none}
     <kbd>1–9</kbd><span>檢視道具（日記要打開來讀）</span>
     <kbd>F</kbd><span>手電筒（深夜很必要，但會讓祂更容易發現你）</span>
     <kbd>Enter</kbd><span>說話（附近的人看得到）　<kbd>V</kbd> 麥克風開關</span>
-    <kbd>M</kbd><span>按住看大地圖　<kbd>T</kbd> 收合／展開隊友狀態　<kbd>Tab</kbd> 說明</span>
+    <kbd>M</kbd><span>按住看大地圖　<kbd>J</kbd> 主線進度　<kbd>T</kbd> 隊友狀態　<kbd>Tab</kbd> 說明</span>
   </div>
   <div class="story" style="font-size:13.5px">
     <p>⏳ 時間分為 <b>早上 → 中午 → 傍晚 → 深夜</b>。深夜時「祂」會出來巡視、開關房門；祂有視野範圍，背對你時看不到。</p>
