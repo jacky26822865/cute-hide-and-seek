@@ -12,6 +12,9 @@ const r2 = v => Math.round(v * 100) / 100;
 const clamp = (v, a, b) => Math.max(a, Math.min(b, v));
 const NORENDER = location.search.includes('norender');
 const MODE = window.HS_MODE || (window.claude?.use ? 'room' : 'ws');
+// 語音：自架版預設開；免伺服器版預設關（降低門檻、更穩定），網址加 ?voice 可開啟
+const MAX_PLAYERS = 8;
+const VOICE_ON = MODE === 'ws' || (MODE === 'p2p' && (window.HS_VOICE || new URLSearchParams(location.search).has('voice')));
 
 // ===================== 地圖（1 格 = 1 公尺） =====================
 const W_ = 40, H_ = 32;
@@ -722,6 +725,7 @@ class RoomNet {
     if (!this.id) { const e = new Error('noid'); e.why = 'noid'; throw e; }
   }
   set(p) { this.r.presence(p).catch(e => { this.err = 'presence:' + (e?.code || e); console.warn('presence', e?.code || e); }); }
+  leave() { try { this.r?.leave(); } catch {} }
   peers() { return this.r.peers().filter(p => p.kind === 'viewer').map(p => ({ id: 'u' + p.peer, me: p.sameTab, p: p.presence || {} })); }
   signal() {}
 }
@@ -749,6 +753,7 @@ class WsNet {
   set(p) { for (const k in p) p[k] === null ? delete this.mine[k] : this.mine[k] = p[k]; if (this.ws?.readyState === 1) this.ws.send(JSON.stringify({ t:'p', d:p })); }
   peers() { return [{ id: this.id, me: true, p: this.mine }, ...[...this.others].map(([id, p]) => ({ id, me: false, p }))]; }
   signal(to, d) { if (this.ws?.readyState === 1) this.ws.send(JSON.stringify({ t:'s', to, d })); }
+  leave() { try { this.ws?.close(); } catch {} }
 }
 
 // ===================== 免伺服器 P2P（PeerJS，中繼由一位玩家的瀏覽器擔任） =====================
@@ -758,6 +763,7 @@ const PEER_ICE = [
   { urls: ['turn:openrelay.metered.ca:80', 'turn:openrelay.metered.ca:443', 'turn:openrelay.metered.ca:443?transport=tcp'], username: 'openrelayproject', credential: 'openrelayproject' },
   { urls: ['turn:eu-0.turn.peerjs.com:3478', 'turn:us-0.turn.peerjs.com:3478'], username: 'peerjs', credential: 'peerjsp' },
 ];
+if (new URLSearchParams(location.search).has('noturn')) PEER_ICE.splice(1); // 測試用：只保留 STUN
 function netProgress(t) { const e = document.getElementById('netNote'); if (e) e.textContent = t; const r = document.getElementById('netStatus'); if (r && !netInfo?.done) r.innerHTML = `<div class="netbar">⏳ ${t}</div>`; }
 class PeerNet {
   constructor() { this.id = null; this.mine = {}; this.others = new Map(); this.onSignal = null; this.hub = null; this.conn = false; this.err = null; }
@@ -774,7 +780,7 @@ class PeerNet {
     // 心跳：中繼 7 秒沒回應就視為離線，改由其他人接手
     setInterval(() => {
       if (this.c?.open) { try { this.c.send({ t:'hb' }); } catch {} }
-      if (this.c && Date.now() - (this.lastHub || 0) > 7000) { const c = this.c; this.c = null; this.conn = false; try { c.close(); } catch {} setTimeout(() => this.relink(), 300 + Math.random() * 1500); }
+      if (this.c && Date.now() - (this.lastHub || 0) > 6000) { const c = this.c; this.c = null; this.conn = false; try { c.close(); } catch {} setTimeout(() => this.relink(), 300 + Math.random() * 1500); }
     }, 2000);
   }
   // 嘗試成為中繼；已有人當中繼就連過去
@@ -803,10 +809,12 @@ class PeerNet {
     else if (m.t === 'p' && m.id !== this.id) { const o = this.others.get(m.id) || {}; for (const k in m.d) m.d[k] === null ? delete o[k] : o[k] = m.d[k]; this.others.set(m.id, o); }
     else if (m.t === 'l') this.others.delete(m.id);
     else if (m.t === 's') this.onSignal?.(m.from, m.d);
+    else if (m.t === 'full') { this.full = true; this.relinking = true; }
   }
   set(p) { for (const k in p) p[k] === null ? delete this.mine[k] : this.mine[k] = p[k]; if (this.c?.open) this.c.send({ t:'p', d:p }); }
   peers() { return [{ id: this.id, me: true, p: this.mine }, ...[...this.others].map(([id, p]) => ({ id, me: false, p }))]; }
   signal(to, d) { if (this.c?.open) this.c.send({ t:'s', to, d }); }
+  leave() { try { this.c?.open && this.c.send({ t:'bye' }); } catch {} try { this.hub?.peer.destroy(); } catch {} try { this.me?.destroy(); } catch {} }
 }
 class Hub { // 由某位玩家的瀏覽器執行，只負責轉送
   constructor(peer) {
@@ -816,6 +824,8 @@ class Hub { // 由某位玩家的瀏覽器執行，只負責轉送
       c.on('data', m => {
         if (id) { const v = this.cl.get(id); if (v) v.seen = Date.now(); }
         if (m.t === 'hb') { try { c.send({ t:'hb' }); } catch {} return; }
+        if (m.t === 'bye' && id) { if (this.cl.get(id)?.c === c) { this.cl.delete(id); this.bc({ t:'l', id }); } try { c.close(); } catch {} return; }
+        if (m.t === 'hello' && this.cl.size >= MAX_PLAYERS && !this.cl.has(m.id)) { try { c.send({ t:'full' }); } catch {} setTimeout(() => { try { c.close(); } catch {} }, 300); return; }
         if (m.t === 'hello') { id = m.id; this.cl.set(id, { c, pres: m.pres || {}, seen: Date.now() }); c.send({ t:'w', peers: [...this.cl].map(([i, v]) => [i, v.pres]) }); this.bc({ t:'p', id, d: m.pres || {} }, id); }
         else if (m.t === 'p' && id) { const v = this.cl.get(id); if (!v) return; for (const k in m.d) m.d[k] === null ? delete v.pres[k] : v.pres[k] = m.d[k]; this.bc({ t:'p', id, d: m.d }, id); }
         else if (m.t === 's' && id) { const v = this.cl.get(m.to); if (v?.c.open) v.c.send({ t:'s', from: id, d: m.d }); }
@@ -823,7 +833,7 @@ class Hub { // 由某位玩家的瀏覽器執行，只負責轉送
       c.on('close', () => { if (id && this.cl.get(id)?.c === c) { this.cl.delete(id); this.bc({ t:'l', id }); } });
     });
     peer.on('disconnected', () => { try { peer.reconnect(); } catch {} });
-    setInterval(() => { for (const [i, v] of this.cl) if (Date.now() - v.seen > 8000) { this.cl.delete(i); try { v.c.close(); } catch {} this.bc({ t:'l', id: i }); } }, 2000);
+    setInterval(() => { for (const [i, v] of this.cl) if (Date.now() - v.seen > 6000) { this.cl.delete(i); try { v.c.close(); } catch {} this.bc({ t:'l', id: i }); } }, 2000);
   }
   bc(m, except) { for (const [i, v] of this.cl) if (i !== except && v.c.open) try { v.c.send(m); } catch {} }
 }
@@ -982,7 +992,7 @@ function newWorld(prev) {
   return { st:'lobby', g0: Math.random().toString(36).slice(2, 7), ph:0, pt:0, du: prev?.du ?? 1, vm: prev?.vm ?? 'room', pl:{}, it:{}, dr:{}, lk:{}, fl:{}, g:{ mo:'n' }, sq: prev?.sq ?? {}, msg:{ i:0, t:'' }, res:null };
 }
 function startGame() {
-  const peers = net.peers().filter(p => p.p.j || p.me);
+  const peers = net.peers().filter(p => p.p.j || p.me).slice(0, MAX_PLAYERS);
   const w = W; w.st = 'play'; w.g0 = Math.random().toString(36).slice(2, 7); w.ph = 0; w.pt = DUR[w.du][0];
   w.it = { dkey:'w', matches:'w', uv:'w', crowbar:'w', cutter:'w', cuffkey:'w', gk1:'w', gk2:'w', gk:'x', windkey:'w', diary:'w', doll:'w', tag:'w', photo:'w' };
   w.dr = { dn:1, cell:1, cf:0, st:0, dir:0, pr:0, h1:1, h2:0, cl:0, hc:1, dm:1, shed:0 };
@@ -1109,7 +1119,7 @@ function hostTick(dt) {
   const peers = net.peers();
   for (const p of peers) { const q = p.p.q; if (!q) continue; const last = W.sq[p.id] || 0; for (const [s, t, a] of q) if (s > last) { hostAction(p.id, t, a); W.sq[p.id] = s; } }
   if (W.st !== 'play') return;
-  for (const p of peers) if (p.p.j && !W.pl[p.id]) W.pl[p.id] = { n:(p.p.n || '玩家').slice(0, 10), f:'v', r:[0,1,2,3][Math.floor(Math.random() * 4)], s:'f', t:0, k:0, e:'', sp:Object.keys(W.pl).length, mg:{ i:0, t:'' } };
+  for (const p of peers) if (p.p.j && !W.pl[p.id] && Object.keys(W.pl).length < MAX_PLAYERS) W.pl[p.id] = { n:(p.p.n || '玩家').slice(0, 10), f:'v', r:[0,1,2,3][Math.floor(Math.random() * 4)], s:'f', t:0, k:0, e:'', sp:Object.keys(W.pl).length, mg:{ i:0, t:'' } };
   W.pt -= dt;
   if (W.pt <= 0) {
     if (W.ph < 3) { W.ph++; W.pt = DUR[W.du][W.ph]; annc(['', '中午。灰塵在光裡飄著。', '傍晚。影子越拉越長……天黑之前做好準備。', '深夜。走廊的盡頭，響起了鐵鍊拖地的聲音。大門的封印，現在撕得下來了。'][W.ph]); if (W.ph === 3) { if (W.fl.cand) openSecret(); checkRitual(); } }
@@ -1524,7 +1534,7 @@ function syncRemotes(dt) {
     }
     if (r.bubT > 0) { r.bubT -= dt; if (r.bubT <= 0) r.bub.visible = false; }
   }
-  for (const [id, r] of remotes) if (!seen.has(id)) { scene.remove(r.av.root); remotes.delete(id); }
+  for (const [id, r] of remotes) if (!seen.has(id)) { if (!net.peers().some(p => p.id === id)) chatLine(`<span style="color:var(--dim)">${esc(r.lab?.replace(/ [⛓🔒🔊]+$/u, '') || '有玩家')} 離開了房間</span>`); scene.remove(r.av.root); remotes.delete(id); }
 }
 function hash(s) { let h = 0; for (const c of String(s)) h = (h * 31 + c.charCodeAt(0)) | 0; return Math.abs(h); }
 let myBub = null; function myBubble() {}
@@ -1709,6 +1719,7 @@ let netInfo = { ok: true, why: '' };
 function netReason(w) {
   if (w === 'noroom') return MODE === 'room' ? '這個畫面沒辦法使用 Claude 的即時房間。最常見的原因：用「公開連結」開啟、沒有登入 claude.ai，或你不是被分享到這個 artifact 的成員。' : '找不到連線功能。';
   if (w.startsWith('join:')) return `加入房間被拒絕（${esc(w.slice(5))}）。可能是這個帳號沒有使用多人房間的權限。`;
+  if (w === 'full' || w.includes('房間已滿')) return `這個房間已經滿 ${MAX_PLAYERS} 人了。請換一個房號，或等有人離開後再試。`;
   if (w === 'nopeerjs') return '連線元件載入失敗（PeerJS）。請檢查網路後重新整理。';
   if (w.startsWith('peer:')) return `連不上配對服務（${esc(w.slice(5))}）。可能是網路擋住了，換個網路或稍後再試。`;
   if (w === 'nohub') return '連不到房間裡的其他玩家。通常是網路擋住了玩家之間的直連（手機行動網路、公司或學校網路常見）。請改用 Wi-Fi、關掉 VPN，或請房主重新整理後再試。';
@@ -1720,7 +1731,7 @@ function netStatusHTML() {
   if (netInfo.solo) return '<div class="netbar">🎮 單人模式</div>';
   if (!netInfo.ok) return `<div class="netbar bad">⚠ <b>沒有連上多人房間，現在是單人模式</b>（其他人看不到你）<br>${netReason(netInfo.why)}<br><button class="btn ghost" onclick="location.reload()" style="margin-top:8px;padding:6px 14px">重新整理再試一次</button></div>`;
   const n = net.peers().filter(p => p.p.j || p.me).length, err = net.err ? `　<span style="color:#ffb3ab">（同步錯誤：${esc(net.err)}）</span>` : '', off = net.conn === false && MODE !== 'ws' ? '　<span style="color:#ffb3ab">（連線中斷，重新連線中…）</span>' : '';
-  return `<div class="netbar ok">✅ 已連上${MODE === 'room' ? ' Claude 即時房間' : MODE === 'p2p' ? (net.hub ? '（你的瀏覽器正在擔任房間中繼）' : '房間中繼') : '遊戲伺服器'}・房號 <b>${esc(netInfo.code)}</b>・目前房內 <b>${n}</b> 人${err}${off}<br><span class="note">朋友要輸入<b>完全相同的房號</b>；如果他那邊顯示「沒有連上」，請看他畫面上的原因。</span></div>`;
+  return `<div class="netbar ok">✅ 已連上${MODE === 'room' ? ' Claude 即時房間' : MODE === 'p2p' ? (net.hub ? '（你的瀏覽器正在擔任房間中繼）' : '房間中繼') : '遊戲伺服器'}・房號 <b>${esc(netInfo.code)}</b>・目前房內 <b>${n}</b>／${MAX_PLAYERS} 人${err}${off}<br><span class="note">朋友要輸入<b>完全相同的房號</b>；如果他那邊顯示「沒有連上」，請看他畫面上的原因。</span></div>`;
 }
 function showLobbyRoom() {
   $('room').style.display = 'grid'; $('ending').style.display = 'none'; inLobby = true;
@@ -1730,7 +1741,7 @@ function showLobbyRoom() {
   $('hostSet').style.display = host ? 'grid' : 'none'; $('startBtn').style.display = host ? 'inline-block' : 'none';
   const ps = net.peers().filter(p => p.p.j);
   $('plist').innerHTML = ps.map(p => { const f = p.p.fa || 'v'; return `<div class="pl">${esc(p.p.n || '玩家')}${p.me ? '（你）' : ''}<span class="tag ${f === 'v' ? 'tv' : f === 'c' ? 'tc' : 'tr'}">${{ v:'拜訪者', c:'被囚者', r:'隨機' }[f]}</span>${p.id === hostId() ? ' 👑' : ''}</div>`; }).join('');
-  if (!(net instanceof WsNet || net instanceof PeerNet)) { $('vmSel').parentElement.style.display = 'none'; }
+  if (!VOICE_ON || !(net instanceof WsNet || net instanceof PeerNet)) { $('vmSel').parentElement.style.display = 'none'; }
 }
 $('startBtn').onclick = () => { if (!amHost()) return; W.du = +$('durSel').value; W.vm = $('vmSel').value; startGame(); };
 $('againBtn').onclick = () => { if (amHost()) { W = newWorld(W); hostState = null; } };
@@ -1742,7 +1753,15 @@ function showEnding() {
   $('endTitle').textContent = res.rit ? '真結局・微笑安息' : res.why === 'wipe' ? (any ? '其他人都被抓了' : '全員被抓') : any ? '逃出生天' : '微笑永遠都在';
   $('endText').innerHTML = res.why === 'wipe' && !any ? '<p>最後一個人也被拖回了禱告室。</p><p>長椅上坐滿了人，每個人的手腕都銬著。祂站在門口，笑得很開心：「明天也一起玩吧。」</p>' : res.rit ? '<p>孩子們的遺物回到了祭壇。戴著微笑面具的「祂」停下腳步，面具落在地上──底下那張臉，正在哭。</p><p>天亮時，你們一起走出了斯邁爾孤兒院。</p>'
     : any ? '<p>有人逃出去了。但回頭看時，二樓的窗邊，有一張笑臉正看著你們離開。</p>' : '<p>天亮了。懲戒室的門閂一直沒有被拉開。</p><p>「歡迎回家。」祂笑著說。</p>';
-  const rows = Object.entries(W.pl).map(([id, P]) => `<tr><td>${esc(P.n)}${id === myId ? '（你）' : ''}</td><td style="color:${FAC_COL[P.f]}">${P.f === 'v' ? '拜訪者' : '被囚者'}・${ROLES[P.r].n}</td><td>${ROUTE[P.e] || '—'}</td><td>個人任務 ${(P.t & 1 ? 1 : 0) + (P.t & 2 ? 1 : 0)}／2</td></tr>`).join('');
+  // ---- 團隊評等 ----
+  const all = Object.values(W.pl), esc_ = all.filter(P => P.s === 'e').length, tasksAll = all.every(P => (P.t & 3) === 3);
+  const taskDone = all.reduce((n, P) => n + (P.t & 1 ? 1 : 0) + (P.t & 2 ? 1 : 0), 0), taskTotal = all.length * 2;
+  const G_ = !all.length || !esc_ ? { s:'✗', n:'逃脫失敗', c:'#e05a4f', d:'沒有人逃出孤兒院。' }
+    : esc_ < all.length ? { s:'★', n:'勉強逃脫', c:'#c9a35a', d:`${esc_}／${all.length} 人逃了出去，但還有人留在院內。` }
+    : tasksAll ? { s:'★★★', n:'大成功', c:'#ffd84a', d:'全員逃脫，而且每個人的個人任務都完成了！' }
+    : { s:'★★', n:'成功逃脫', c:'#9fe08a', d:`全員逃脫！個人任務完成 ${taskDone}／${taskTotal}，全部完成就是大成功。` };
+  $('endText').innerHTML = `<div class="grade" style="border-color:${G_.c}"><div class="gs" style="color:${G_.c}">${G_.s}</div><div><div class="gn" style="color:${G_.c}">${G_.n}</div><div class="gd">${G_.d}${res.rit ? '<br>✦ 達成真結局：孩子們的遺物回到了祭壇。' : ''}</div></div></div>` + $('endText').innerHTML;
+  const rows = Object.entries(W.pl).map(([id, P]) => `<tr><td>${esc(P.n)}${id === myId ? '（你）' : ''}</td><td style="color:${FAC_COL[P.f]}">${P.f === 'v' ? '拜訪者' : '被囚者'}・${ROLES[P.r].n}</td><td>${P.s === 'e' ? '✅ ' : '❌ '}${ROUTE[P.e] || '—'}</td><td>${(P.t & 3) === 3 ? '✅ ' : ''}個人任務 ${(P.t & 1 ? 1 : 0) + (P.t & 2 ? 1 : 0)}／2</td></tr>`).join('');
   $('endTable').innerHTML = `<tr><th>玩家</th><th>身分</th><th>結果</th><th>個人任務</th></tr>${rows}`;
   $('againBtn').style.display = amHost() ? 'inline-block' : 'none'; $('againNote').textContent = amHost() ? '' : '等待房主回到等待室……';
 }
@@ -1833,8 +1852,8 @@ function loop() {
 const nameIn = $('nameIn'), roomIn = $('roomIn');
 try { nameIn.value = localStorage.getItem('hs-name') || ''; } catch {}
 roomIn.value = (location.hash.slice(1) || Math.random().toString(36).slice(2, 6)).toUpperCase();
-if (MODE === 'room') $('micRow').style.display = 'none';
-$('netNote').textContent = MODE === 'room' ? '連線：Claude 即時房間（文字聊天）' : MODE === 'p2p' ? '連線：玩家直連（免伺服器，支援語音）' : '連線：自架伺服器（支援語音）';
+if (!VOICE_ON) $('micRow').style.display = 'none';
+$('netNote').textContent = MODE === 'room' ? '連線：Claude 即時房間（文字聊天）' : MODE === 'p2p' ? (VOICE_ON ? '連線：玩家直連（免伺服器，含語音）' : '連線：玩家直連（免伺服器，文字聊天）') : '連線：自架伺服器（支援語音）';
 
 async function join(solo) {
   const name = (nameIn.value.trim() || '玩家' + Math.floor(Math.random() * 90 + 10)).slice(0, 10);
@@ -1852,6 +1871,11 @@ async function join(solo) {
     else if (MODE === 'p2p') n = new PeerNet();
     else n = new WsNet();
     await n.start(code);
+    if (!solo) {
+      await new Promise(r => setTimeout(r, 1200));
+      const others = n.peers().filter(p => !p.me && p.p.j).length;
+      if (n.full || others >= MAX_PLAYERS) { try { n.leave?.(); } catch {} throw Object.assign(new Error('full'), { why: 'full' }); }
+    }
     net = n; // 連線確定完成後才讓遊戲使用（避免還沒連上就自以為是房主）
   } catch (e) {
     console.warn(e); netInfo.ok = false; netInfo.why = e?.why || e?.message || String(e);
@@ -1862,7 +1886,7 @@ async function join(solo) {
   me.name = name; me.char = hash(myId + name) % CHARS.length;
   pres({ j:1, n:name, fa, c:me.char });
   try { if (location.hash.slice(1) !== code && !solo) history.replaceState(null, '', '#' + code); } catch {}
-  if ((net instanceof WsNet || net instanceof PeerNet) && $('micIn').checked) {
+  if (VOICE_ON && (net instanceof WsNet || net instanceof PeerNet) && $('micIn').checked) {
     let ice = net instanceof PeerNet ? PEER_ICE : [{ urls:'stun:stun.l.google.com:19302' }];
     if (net instanceof WsNet) try { const base = window.HS_WS_URL ? window.HS_WS_URL.replace(/^ws/, 'http').replace(/\/ws$/, '/') : ''; const c = await (await fetch(base + 'config.json')).json(); if (c.iceServers) ice = c.iceServers; } catch {}
     voice = new Voice(net, ice); if (!(await voice.init())) toast('沒有取得麥克風權限，仍可聽見別人、用文字聊天');
@@ -1871,6 +1895,10 @@ async function join(solo) {
   joinedAt = performance.now() - (solo ? 1500 : 0);
   showLobbyRoom();
 }
+let leftAlready = false;
+function leaveRoom() { if (leftAlready || !net) return; leftAlready = true; try { if (Object.keys(pend).length) net.set(pend); } catch {} try { voice && [...voice.pcs.keys()].forEach(id => voice.drop(id)); } catch {} try { net.leave?.(); } catch {} }
+addEventListener('pagehide', leaveRoom);
+addEventListener('beforeunload', leaveRoom);
 $('joinBtn').onclick = () => join(false);
 $('soloBtn').onclick = () => join(true);
 
